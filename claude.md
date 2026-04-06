@@ -1,0 +1,494 @@
+# Claude.md — Favo de Colorir
+
+## Visão Geral do Produto
+
+**Produto:** App Favo de Colorir (Ateliê de Cerâmica)  
+**Cliente:** Débora — Favo de Colorir (Tijuca, RJ)  
+**Equipe:** Marcus, Luis Barbedo, Leonardo Camilo — BaxiJen  
+**Versão PRD:** 1.2 (Março de 2026)  
+**Status:** Para desenvolvimento
+
+### Problema
+
+Ateliê com ~80 alunas ativas gerenciado manualmente via WhatsApp, bloco de notas e papel. Cobrança mensal consome 2 dias inteiros; vagas são perdidas por falta de controle de presença; sem comunidade digital.
+
+### Solução
+
+App mobile-first (Android prioritário) que centraliza: gestão de agenda/turmas, registro de materiais, cobrança automática, feed pessoal de evolução, comunidade exclusiva.
+
+### Definição de Sucesso
+
+- 100% das alunas usando o app (obrigatório)
+- Cobrança mensal: 2 dias → minutos
+- Zero vagas perdidas por falta de controle
+- Pagamentos fluindo sem intervenção manual
+
+---
+
+## Stack Técnica
+
+| Camada | Tecnologia | Justificativa |
+|--------|------------|---------------|
+| **App (Android + iOS + Web)** | Flutter (Dart) | Codebase única, experiência do Luiz |
+| **Backend/BaaS** | Supabase | PostgreSQL relacional (ideal para cobranças), Auth, Storage, Realtime, Edge Functions |
+| **Banco de dados** | PostgreSQL (via Supabase) | Totalizações de cobrança: `SELECT SUM() GROUP BY` simples |
+| **Autenticação** | Supabase Auth | E-mail + senha, Row Level Security (RLS) para permissões |
+| **Storage (fotos)** | Supabase Storage | Fotos das peças, buckets por aluna |
+| **Realtime** | Supabase Realtime | Chat professora ↔ aluna, atualizações presença |
+| **Edge Functions** | Supabase (Deno) | Totalização mensal, notificações, moderação IA |
+| **Notificações push** | Firebase Cloud Messaging (FCM) | Gratuito, Android + iOS |
+| **Pagamento Pix** | Mercado Pago API | Sem taxas, QR code automático |
+| **Pagamento cartão** | Nuvemshop | Já integrado (parcela 2-3x) |
+| **Landing page** | Astro | Estático, leve, SEO excelente |
+| **Hospedagem landing** | Vercel | Deploy automático em push |
+| **Repositório** | GitHub monorepo | Flutter, Supabase, landing e docs |
+
+### Por que Supabase?
+- Relacional perfeit para somas/grupos (argilas+queimas por aluna/mês)
+- Row Level Security resolve permissões (admin vê financeiro, professora não)
+- SQL real para relatórios, CSV, PDF
+- Free tier suficiente (500MB, 1GB storage, 50k users)
+- PostgreSQL padrão = migração fácil
+
+---
+
+## Arquitetura de Módulos
+
+| Módulo | Descrição | Usuários |
+|--------|-----------|----------|
+| **M1 — Auth** | Login, cadastro, perfis, aceite obrigatório de políticas | Todos |
+| **M2 — Agenda** | Turmas, confirmação presença, reposição, lista espera | Todos |
+| **M3 — Materiais** | Registro argila, queimas, totalização por aluna | Professoras + Admin |
+| **M4 — Cobrança** | Painel financeiro, cobranças, Pix/cartão | Admin (Débora) |
+| **M5 — Feed pessoal** | Histórico, fotos, anotações | Alunas |
+| **M6 — Comunidade** | Feed social, posts, moderação, chat | Todos |
+| **M7 — Estoque** | Controle argilas, alertas | Admin + Professoras |
+
+---
+
+## Papéis e Permissões
+
+| Papel | Acesso | Prioridade |
+|-------|--------|-----------|
+| **Admin (Débora)** | Tudo: agenda, materiais, financeiro, comunidade, estoque, usuários | Alta |
+| **Professora** | Agenda, materiais, comunidade, mensagens, estoque. Sem financeiro. | Alta |
+| **Assistente** | Agenda (viz), materiais | Média |
+| **Aluna** | Agenda pessoal, feed pessoal, comunidade, histórico, pagamentos | Alta |
+
+---
+
+## M1 — Autenticação e Políticas
+
+### Fluxo de Cadastro
+
+1. **Triagem prévia (fora do app):** Débora confirma vaga via Instagram/WhatsApp antes de enviar link
+2. **Cadastro no app:** Nome, e-mail, telefone, data de nascimento, foto (opcional)
+3. **Aceite obrigatório de políticas:** 
+   - Regras de reposição (máx 1/mês, aviso 1 dia, não remarca se faltar)
+   - Política de faltas (confirmação obrigatória)
+   - Cobrança de argilas e queimas (por consumo, fim do mês)
+   - Cancelamento por plano (mensal: 10-15 dias; tri/semi: multa 20%)
+   - Regras comunidade (respeito, moderação, sem política)
+4. **Aprovação:** Admin aprova e vincula à turma
+
+**Crítico:** Cadastro só conclui após aceite. Registro de data/hora no BD para conformidade legal.
+
+---
+
+## M2 — Agenda e Agendamentos
+
+### Estrutura de Turmas
+
+- **Modalidades:** Regular (semanal, 2h), Oficina/Workshop, Aula avulsa
+- **Capacidade:** Regular 8, Oficina 10
+- **Horários:** Fixos semanais (seg-sáb)
+- **Níveis:** Sem progressão
+- **Pré-requisitos:** Nenhum
+
+### Confirmação de Presença (Crítico)
+
+**Regra:** 1 dia antes de cada aula, notificação push: "Vou" ou "Não vou"
+
+| Cenário | Comportamento |
+|---------|---------------|
+| Confirma "Vou" | Presença pré-registrada |
+| Informa "Não vou" | Vaga liberada, falta registrada |
+| Não responde | Lembrete 6h antes; se não responder, conta como esperada |
+
+### Sistema de Reposição
+
+- **Máx 1 reposição/mês** (admin pode liberar extras)
+- **Não reagenda:** faltou, perdeu
+- **Aviso 1 dia antes**
+- **Fluxo:** Informa falta → Vaga liberada → Notifica alunas com reposição pendente → Aluna seleciona turma → Confirmação automática
+
+### Lista de Espera
+
+- Turma cheia → fila de interessadas
+- Vaga abre → notificação (24h para aceitar)
+
+### Aulas Avulsas
+
+- Aluna experiente compra aula única, escolhe turma com vaga, paga e agenda
+
+---
+
+## M3 — Registro de Materiais
+
+### Registro de Argila
+
+1. Professora seleciona turma/aula
+2. Para cada aluna: tipo argila (dropdown) + kg usados
+3. Registra devolução (se houver)
+4. Cálculo automático: usado − devolvido
+5. Tipos configuráveis pela admin
+
+### Registro de Queimas
+
+- **Biscoito (1ª queima):** não cobrada
+- **Esmalte (2ª queima):** cobrada por peça
+  - Caneca: ~R$5-6
+  - Prato: ~R$8-15
+  - (Valores configuráveis)
+
+**Fluxo:** Professora seleciona aluna + tipo peça + tamanho → Sistema aplica preço → Registra etapa (modelou/pintou/queima esmalte)
+
+### Campos Opcionais (Insight Ceramik)
+
+- Dimensões (altura, diâmetro) — opcional
+- Peso — opcional
+
+> Campos opcionais não bloqueiam fluxo.
+
+---
+
+## M4 — Cobrança e Pagamentos
+
+### Planos
+
+| Plano | Descrição | Cancelamento |
+|-------|-----------|--------------|
+| **Mensal** | Valor cheio, renova automático | Aviso 10-15 dias |
+| **Trimestral** | Desconto | Multa 20% restante |
+| **Semestral** | Maior desconto | Multa 20% restante |
+| **Avulsa** | Pagamento único | N/A |
+| **Oficina** | Pagamento único, tudo incluso | N/A |
+
+### Composição da Cobrança
+
+**Total = Mensalidade + Argilas do mês + Queimas de esmalte do mês**
+
+### Fluxo
+
+1. **1º dia útil:** Sistema totaliza argilas + queimas por aluna
+2. **Painel de cobrança:** Valores discriminados (admin revisa)
+3. **Notificação:** Cada aluna recebe aviso
+4. **Pagamento:** Aluna paga pelo app (Pix ou cartão)
+5. **Status:** pendente → pago
+
+### Métodos de Pagamento
+
+- **Pix:** Preferencial, sem taxas, QR code automático
+- **Cartão:** Via Nuvemshop, parcelamento 2-3x
+
+### Painel Financeiro (Admin)
+
+- Visão geral (total a receber, recebido, pendente)
+- Lista por aluna (plano, argilas, queimas, total, status)
+- Filtros e exportação (CSV/PDF)
+
+---
+
+## M5 — Feed Pessoal / Histórico da Aluna
+
+Timeline de evolução na cerâmica.
+
+| ID | Funcionalidade | Prioridade |
+|----|----|-----------|
+| **FP-01** | Timeline por aula (data, turma, o que fez) | Alta |
+| **FP-02** | Foto(s) da peça em cada etapa | Alta |
+| **FP-03** | Registro de argila usada | Alta |
+| **FP-04** | Anotações livres + notas rápidas com cores | Alta |
+| **FP-05** | Privado por padrão, opção publicar na comunidade | Média |
+| **FP-06** | Filtro por tipo peça, argila, período | Baixa |
+| **FP-07** | Campos opcionais: dimensões e peso | Baixa |
+
+---
+
+## M6 — Comunidade
+
+Feed social exclusivo (modelo: grupo Facebook clássico).
+
+| ID | Funcionalidade | Prioridade |
+|----|----|-----------|
+| **CM-01** | Feed único (sem separação por turma) | Alta |
+| **CM-02** | Post com foto/vídeo/texto | Alta |
+| **CM-03** | Comentários e curtidas | Alta |
+| **CM-04** | Sem compartilhamento externo | Alta |
+| **CM-05** | Sem DM entre alunas | Alta |
+| **CM-06** | Chat professora ↔ aluna | Alta |
+| **CM-07** | Enquetes e desafios criativos | Média |
+| **CM-08** | Blog/dicas das professoras | Média |
+| **CM-09** | Acesso só alunas ativas | Alta |
+
+### Moderação
+
+- Filtro automático (IA) para conteúdo político/inadequado
+- Flagados → fila de aprovação
+- Sem flag → direto no feed
+- Admin/professoras podem excluir manualmente
+
+### Notificações
+
+| Tipo | Comportamento | Configurável? |
+|------|---------------|----------------|
+| Recado geral | Obrigatório | Não |
+| Confirmação presença | Obrigatório | Não |
+| Lembrete reposição | Obrigatório | Não |
+| Cobrança | Obrigatório | Não |
+| Nova postagem | Opcional | Sim |
+| Resposta comentário | Opcional | Sim |
+| Mensagem direta | Obrigatório | Não |
+
+---
+
+## M7 — Controle de Estoque
+
+| ID | Funcionalidade | Prioridade |
+|----|----|-----------|
+| **ES-01** | Cadastro de argilas com estoque (kg) | Média |
+| **ES-02** | Baixa automática conforme uso | Média |
+| **ES-03** | Alerta nível mínimo (~2 sacos) | Média |
+| **ES-04** | Registro de compras | Baixa |
+| **ES-05** | Histórico de consumo mensal | Baixa |
+
+> Prazo reposição: ~5 dias. Alerta deve considerar janela + consumo médio.
+
+---
+
+## Mapa de Telas
+
+### Aluna
+
+| Tela | Descrição | Módulo |
+|------|-----------|--------|
+| Login/Cadastro | Entrada + aceite políticas obrigatório | M1 |
+| Home | Próxima aula, notificações, atalhos | M2 |
+| Minha agenda | Calendário, confirmação, reposições | M2 |
+| Repor aula | Turmas com vaga | M2 |
+| Meu feed | Timeline pessoal + notas rápidas | M5 |
+| Comunidade | Feed social | M6 |
+| Mensagens | Chat com professoras | M6 |
+| Meus pagamentos | Cobrança, histórico, pagar | M4 |
+| Perfil | Dados, notificações, plano | M1 |
+
+### Professora
+
+| Tela | Descrição | Módulo |
+|------|-----------|--------|
+| Dashboard | Turmas do dia, confirmadas, pendências | M2 |
+| Turma do dia | Lista presentes + registro rápido | M3 |
+| Registrar materiais | Aluna → argila + peças | M3 |
+| Comunidade | Feed + blog/dicas | M6 |
+| Mensagens | Chat com alunas | M6 |
+| Estoque | Visão argilas, alertas | M7 |
+
+### Admin (Débora)
+
+| Tela | Descrição | Módulo |
+|------|-----------|--------|
+| Dashboard admin | Agenda, cobranças, moderação, alertas | Todos |
+| Gestão de turmas | Criar, editar, abrir/fechar | M2 |
+| Gestão de alunas | Cadastros, planos, histórico | M1 |
+| Políticas do ateliê | Editar texto, forçar re-aceite | M1 |
+| Painel financeiro | Cobranças, status, exportar | M4 |
+| Moderar posts | Fila de posts flagados | M6 |
+| Notificações gerais | Recados para todas | M6 |
+| Configurações | Preços queima, tipos argila | M3/M7 |
+
+---
+
+## MVP (Fase 1)
+
+**Prioridades:**
+1. Gestão de pagamentos e cobrança automática (argilas + queimas)
+2. Sistema de reposição (confirmação presença + reagendamento)
+3. Feed pessoal / histórico da aluna
+
+**Inclui:** M1 (com políticas), M2, M3, M4, M5
+
+---
+
+## Fase 2 — Comunidade
+
+M6 completo
+
+---
+
+## Fase 3 — Extras
+
+- M7 — Estoque
+- Enquetes e desafios
+- Blog das professoras
+
+---
+
+## Design
+
+**Diretrizes:** Criativo • Artesanal • Acolhedor
+
+- **Estilo:** Minimalista e limpo
+- **Formas:** Cantos arredondados, orgânicas
+- **Fotos:** Reais do ateliê
+- **Paleta:** Tons quentes (mel, terracota)
+- **Tom:** Informal, acolhedor, textos diretos
+- **Mobile-first:** Design para celular, web como espelho
+
+---
+
+## Requisitos Não-Funcionais
+
+| Categoria | Requisito |
+|-----------|-----------|
+| Performance | Telas carregam < 2s em 4G |
+| Performance | Registro de materiais offline |
+| Segurança | Auth segura (e-mail + senha ou OAuth) |
+| Segurança | Financeiro só admin (RLS no BD) |
+| Segurança | LGPD: consentimento + opção excluir conta |
+| Disponibilidade | 99.5% uptime |
+| Escala | Até 200 usuários simultâneos |
+| Backup | Diário automático |
+| Notificações | Push (FCM ou equivalente) |
+| Analytics | DAU/MAU, telas mais acessadas |
+
+---
+
+## Estrutura do Monorepo
+
+```
+favo-platform/
+├── app/                        ← Flutter (Android + iOS + web)
+│   ├── lib/
+│   │   ├── core/               ← tema, constantes, utils, Supabase client
+│   │   ├── models/             ← Aluna, Turma, Aula, etc.
+│   │   ├── services/           ← acesso Supabase (repos)
+│   │   ├── modules/
+│   │   │   ├── auth/           ← M1
+│   │   │   ├── agenda/         ← M2
+│   │   │   ├── materiais/      ← M3
+│   │   │   ├── cobranca/       ← M4
+│   │   │   ├── feed_pessoal/   ← M5
+│   │   │   ├── comunidade/     ← M6
+│   │   │   └── estoque/        ← M7
+│   │   └── main.dart
+│   ├── pubspec.yaml
+│   └── test/
+│
+├── landing/                    ← Astro (landing page)
+│   ├── src/pages/
+│   ├── astro.config.mjs
+│   └── package.json
+│
+├── supabase/                   ← Backend
+│   ├── migrations/             ← schema SQL versionado
+│   ├── functions/              ← Edge Functions (Deno/TS)
+│   │   ├── totalizar-cobranca/
+│   │   ├── enviar-notificacao/
+│   │   └── moderar-post/
+│   ├── seed.sql
+│   └── config.toml
+│
+├── docs/
+│   ├── prd_v1.2.md
+│   └── requisitos.md
+│
+├── .github/workflows/          ← CI/CD
+├── .gitignore
+└── README.md
+```
+
+---
+
+## Divisão de Trabalho
+
+| Pessoa | Foco | Módulos |
+|--------|------|---------|
+| **Marcus** | Arquitetura, Supabase, edge functions, integrações (Pix, FCM) | M4 (Cobrança), infra |
+| **Leonardo** | Flutter — telas e lógica | M2 (Agenda), M3 (Materiais), M5 (Feed) |
+| **Luiz** | Flutter — auth, comunidade, landing | M1 (Auth), M6 (Comunidade), Landing |
+
+---
+
+## Análise Competitiva — Ceramik
+
+O Ceramik (ceramik.app/pt) é a referência do mercado. Diferenças e insights:
+
+### Diferenciais do Favo de Colorir
+
+- **Sistema de reposição automática** com liberação de vagas em tempo real
+- **Cobrança automática de argila por consumo** (maior dor, não encontrada no Ceramik)
+- **Confirmação de presença proativa** (notificação 1 dia antes)
+- **Moderação com filtro IA**
+- **Políticas do ateliê integradas ao onboarding**
+- **100% em português BR**
+
+### Insights para Incorporar
+
+- Kiln tracking com dimensões e peso (campos opcionais)
+- Notas rápidas com cores (já planejado em FP-04)
+- Studio analytics com gráficos visuais
+
+---
+
+## Próximos Passos (Do PRD)
+
+| # | Ação | Resp. | Prazo |
+|---|------|-------|-------|
+| 1 | Débora aprovar PRD v1.2 | Débora | 1 semana |
+| 2 | Enviar formulário cadastro (Google Forms) | Débora | 1 semana |
+| 3 | Enviar fotos controle manual | Débora | 1 semana |
+| 4 | Enviar referências visuais + identidade | Débora | 15 dias |
+| 5 | Analisar app Ceramik em detalhe | BaxiJen | 1 semana |
+| 6 | ✅ Definir stack técnica | BaxiJen | Concluído |
+| 7 | Redigir políticas do ateliê | Débora | 2 semanas |
+| 8 | Criar wireframes MVP | BaxiJen | 2 semanas |
+| 9 | Apresentar wireframes | Todos | Reunião #2 |
+| 10 | Configurar repositório (monorepo Flutter) | BaxiJen | 1 semana |
+| 11 | Recrutar grupo de testes | Débora | Antes do beta |
+
+---
+
+## Comandos CLI Essenciais
+
+```bash
+# Setup Flutter (Android + iOS + Web)
+flutter create --org br.com.favodecolorir --project-name favo app
+
+# Adicionar dependências
+cd app && flutter pub add supabase_flutter firebase_messaging image_picker cached_network_image go_router flutter_riverpod intl
+
+# Setup Supabase
+supabase init
+supabase start
+supabase db reset
+
+# Setup Firebase para FCM
+flutterfire configure --project=favo-de-colorir
+
+# Setup Astro
+npm create astro@latest landing -- --template minimal
+
+# Build & Deploy
+cd app && flutter build apk --release     # Android
+cd app && flutter build appbundle --release # Android (Play Store)
+cd app && flutter build ipa --release     # iOS
+cd app && flutter build web --release     # Web
+cd landing && npm run build              # Landing
+supabase functions deploy                # Edge Functions
+```
+
+---
+
+**Última atualização:** 6 de Abril de 2026  
+**Versão PRD:** 1.2  
+**Status:** Para desenvolvimento

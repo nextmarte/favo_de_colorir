@@ -1,0 +1,39 @@
+name: Flutter CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Build APK (debug)
+        run: flutter build apk --debug

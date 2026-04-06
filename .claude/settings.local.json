@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter --version)",
+      "Bash(choco install:*)",
+      "Bash(powershell.exe -Command \"Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(git clone:*)",
+      "Bash(mkdir -p /d/bin)",
+      "Bash(curl -sL \"https://github.com/supabase/cli/releases/latest/download/supabase_windows_amd64.tar.gz\" -o /tmp/supabase.tar.gz)",
+      "Bash(tar -xzf /tmp/supabase.tar.gz -C /d/bin)",
+      "Bash(/d/bin/supabase --version)",
+      "Bash(/d/bin/supabase init:*)",
+      "Bash(export PATH=\"/d/flutter/bin:$PATH\")",
+      "Bash(flutter analyze:*)"
+    ]
+  }
+}
