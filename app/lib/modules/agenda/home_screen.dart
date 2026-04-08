@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
+import '../../services/agenda_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
 
@@ -12,16 +14,15 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
+    final nextAulaAsync = ref.watch(nextAulaProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Favo de Colorir'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: navigate to notifications
-            },
+            icon: const Icon(Icons.person_outlined),
+            onPressed: () => context.go('/profile'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -37,7 +38,7 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome card
+            // Welcome + próxima aula
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -59,9 +60,39 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Sua próxima aula será exibida aqui.',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                    nextAulaAsync.when(
+                      data: (next) {
+                        if (next == null) {
+                          return Text(
+                            'Sem aulas agendadas esta semana.',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          );
+                        }
+                        final dateStr = DateFormat('EEEE, d/MM', 'pt_BR')
+                            .format(next.aula.scheduledDate);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Próxima aula:',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${next.turma.name} · $dateStr · ${next.aula.startTime.substring(0, 5)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        );
+                      },
+                      loading: () => const LinearProgressIndicator(),
+                      error: (_, _) => Text(
+                        'Sua próxima aula será exibida aqui.',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
                     ),
                   ],
                 ),
@@ -82,9 +113,7 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.calendar_today,
                     label: 'Minha Agenda',
                     color: FavoColors.honey,
-                    onTap: () {
-                      // TODO: navigate to schedule
-                    },
+                    onTap: () => context.go('/agenda'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -94,7 +123,7 @@ class HomeScreen extends ConsumerWidget {
                     label: 'Meu Feed',
                     color: FavoColors.terracotta,
                     onTap: () {
-                      // TODO: navigate to feed
+                      // TODO: navigate to feed (Sprint 5)
                     },
                   ),
                 ),
@@ -109,7 +138,7 @@ class HomeScreen extends ConsumerWidget {
                     label: 'Pagamentos',
                     color: FavoColors.warmGray,
                     onTap: () {
-                      // TODO: navigate to payments
+                      // TODO: navigate to payments (Sprint 6)
                     },
                   ),
                 ),
@@ -120,11 +149,71 @@ class HomeScreen extends ConsumerWidget {
                     label: 'Repor Aula',
                     color: FavoColors.honeyDark,
                     onTap: () {
-                      // TODO: navigate to makeup
+                      // TODO: navigate to makeup (Sprint 3)
                     },
                   ),
                 ),
               ],
+            ),
+
+            // Admin / Teacher shortcuts
+            profileAsync.when(
+              data: (profile) {
+                if (profile == null) return const SizedBox.shrink();
+                final extras = <Widget>[];
+
+                if (profile.isAdmin) {
+                  extras.addAll([
+                    const SizedBox(height: 24),
+                    Text('Administração',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _QuickActionCard(
+                            icon: Icons.people,
+                            label: 'Aprovar\nCadastros',
+                            color: FavoColors.terracotta,
+                            onTap: () => context.go('/admin/approvals'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _QuickActionCard(
+                            icon: Icons.class_,
+                            label: 'Gestão\nTurmas',
+                            color: FavoColors.honey,
+                            onTap: () => context.go('/admin/turmas'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ]);
+                }
+
+                if (profile.isTeacher || profile.isAdmin) {
+                  extras.addAll([
+                    const SizedBox(height: 24),
+                    Text('Professora',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    _QuickActionCard(
+                      icon: Icons.dashboard,
+                      label: 'Dashboard do Dia',
+                      color: FavoColors.honeyDark,
+                      onTap: () => context.go('/teacher/dashboard'),
+                    ),
+                  ]);
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: extras,
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
           ],
         ),

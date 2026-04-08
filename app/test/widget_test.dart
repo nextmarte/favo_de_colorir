@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:favo/models/profile.dart';
+import 'package:favo/models/turma.dart';
+import 'package:favo/models/aula.dart';
+import 'package:favo/models/presenca.dart';
 import 'package:favo/services/policy_service.dart';
 
 void main() {
@@ -124,6 +127,137 @@ void main() {
       expect(policy.title, 'Regras de Reposição');
       expect(policy.content, 'Máximo de 1 reposição por mês.');
       expect(policy.version, 1);
+    });
+  });
+
+  group('Turma', () {
+    test('fromJson parses correctly', () {
+      final json = {
+        'id': 'turma-1',
+        'name': 'Terça Manhã',
+        'modality': 'regular',
+        'day_of_week': 2,
+        'start_time': '09:00:00',
+        'end_time': '11:00:00',
+        'capacity': 8,
+        'teacher_id': 'teacher-1',
+        'is_active': true,
+        'created_at': '2026-04-06T00:00:00Z',
+      };
+
+      final turma = Turma.fromJson(json);
+
+      expect(turma.name, 'Terça Manhã');
+      expect(turma.modality, TurmaModality.regular);
+      expect(turma.dayOfWeek, 2);
+      expect(turma.capacity, 8);
+      expect(turma.isActive, true);
+    });
+
+    test('toJson serializes correctly', () {
+      final turma = Turma(
+        id: 'turma-1',
+        name: 'Quarta Tarde',
+        modality: TurmaModality.workshop,
+        dayOfWeek: 3,
+        startTime: '14:00:00',
+        endTime: '16:00:00',
+        capacity: 10,
+        isActive: true,
+        createdAt: DateTime.now(),
+      );
+
+      final json = turma.toJson();
+
+      expect(json['name'], 'Quarta Tarde');
+      expect(json['modality'], 'workshop');
+      expect(json['day_of_week'], 3);
+      expect(json['capacity'], 10);
+      expect(json.containsKey('id'), false);
+    });
+  });
+
+  group('Aula', () {
+    test('fromJson parses all statuses', () {
+      for (final entry in {
+        'scheduled': AulaStatus.scheduled,
+        'in_progress': AulaStatus.inProgress,
+        'completed': AulaStatus.completed,
+        'cancelled': AulaStatus.cancelled,
+      }.entries) {
+        final json = {
+          'id': 'a-1',
+          'turma_id': 't-1',
+          'scheduled_date': '2026-04-10',
+          'start_time': '09:00:00',
+          'end_time': '11:00:00',
+          'status': entry.key,
+          'notes': null,
+          'created_at': '2026-04-06T00:00:00Z',
+        };
+
+        final aula = Aula.fromJson(json);
+        expect(aula.status, entry.value);
+      }
+    });
+
+    test('toJson uses snake_case for status', () {
+      final aula = Aula(
+        id: 'a-1',
+        turmaId: 't-1',
+        scheduledDate: DateTime(2026, 4, 10),
+        startTime: '09:00:00',
+        endTime: '11:00:00',
+        status: AulaStatus.inProgress,
+        createdAt: DateTime.now(),
+      );
+
+      expect(aula.toJson()['status'], 'in_progress');
+    });
+  });
+
+  group('Presenca', () {
+    test('fromJson parses all confirmation statuses', () {
+      for (final entry in {
+        'pending': ConfirmationStatus.pending,
+        'confirmed': ConfirmationStatus.confirmed,
+        'declined': ConfirmationStatus.declined,
+        'no_response': ConfirmationStatus.noResponse,
+      }.entries) {
+        final json = {
+          'id': 'p-1',
+          'aula_id': 'a-1',
+          'student_id': 's-1',
+          'confirmation': entry.key,
+          'attended': null,
+          'is_makeup': false,
+          'confirmed_at': null,
+          'created_at': '2026-04-06T00:00:00Z',
+        };
+
+        final presenca = Presenca.fromJson(json);
+        expect(presenca.confirmation, entry.value);
+      }
+    });
+
+    test('toJson serializes correctly', () {
+      final presenca = Presenca(
+        id: 'p-1',
+        aulaId: 'a-1',
+        studentId: 's-1',
+        confirmation: ConfirmationStatus.confirmed,
+        attended: true,
+        isMakeup: false,
+        confirmedAt: DateTime(2026, 4, 9, 10, 30),
+        createdAt: DateTime.now(),
+      );
+
+      final json = presenca.toJson();
+
+      expect(json['confirmation'], 'confirmed');
+      expect(json['attended'], true);
+      expect(json['is_makeup'], false);
+      expect(json['confirmed_at'], isNotNull);
     });
   });
 }

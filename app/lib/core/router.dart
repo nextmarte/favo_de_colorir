@@ -7,7 +7,12 @@ import '../modules/auth/signup_screen.dart';
 import '../modules/auth/policy_acceptance_screen.dart';
 import '../modules/auth/pending_approval_screen.dart';
 import '../modules/auth/admin_approval_screen.dart';
+import '../modules/auth/profile_screen.dart';
 import '../modules/agenda/home_screen.dart';
+import '../modules/agenda/my_agenda_screen.dart';
+import '../modules/agenda/aula_detail_screen.dart';
+import '../modules/agenda/teacher_dashboard_screen.dart';
+import '../modules/agenda/admin_turmas_screen.dart';
 import '../services/auth_service.dart';
 import 'supabase_client.dart';
 
@@ -25,12 +30,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final publicRoutes = ['/login', '/signup'];
       final isPublicRoute = publicRoutes.contains(location);
 
-      // Unauthenticated users can only access public routes
       if (!isAuthenticated && !isPublicRoute) {
         return '/login';
       }
 
-      // Authenticated users shouldn't be on login/signup
       if (isAuthenticated && isPublicRoute) {
         return '/';
       }
@@ -59,8 +62,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
+        path: '/agenda',
+        builder: (context, state) => const MyAgendaScreen(),
+      ),
+      GoRoute(
+        path: '/aula/:id',
+        builder: (context, state) => AulaDetailScreen(
+          aulaId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/teacher/dashboard',
+        builder: (context, state) => const TeacherDashboardScreen(),
+      ),
+      GoRoute(
         path: '/admin/approvals',
         builder: (context, state) => const AdminApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/admin/turmas',
+        builder: (context, state) => const AdminTurmasScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -71,7 +96,6 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Notifier that triggers router refresh when auth state changes
 class _AuthNotifier extends ChangeNotifier {
   _AuthNotifier(Ref ref) {
     ref.listen(authStateProvider, (_, _) {
