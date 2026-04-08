@@ -11,13 +11,13 @@
 | Sprint | Fase | Status | Início | Conclusão |
 |--------|------|--------|--------|-----------|
 | 0 | Infraestrutura e Fundação | **CONCLUÍDO** | 2026-04-06 | 2026-04-06 |
-| 1 | M1 Auth Core | PENDENTE | — | — |
-| 2 | M2 Agenda Core | PENDENTE | — | — |
-| 3 | M2 Reposição + Lista Espera | PENDENTE | — | — |
-| 4 | M3 Materiais | PENDENTE | — | — |
-| 5 | M5 Feed Pessoal | PENDENTE | — | — |
-| 6 | M4 Cobrança Core | PENDENTE | — | — |
-| 7 | M4 Cobrança Completo | PENDENTE | — | — |
+| 1 | M1 Auth Core | **CONCLUÍDO** | 2026-04-08 | 2026-04-08 |
+| 2 | M2 Agenda Core | **CONCLUÍDO** | 2026-04-08 | 2026-04-08 |
+| 3 | M2 Reposição + Lista Espera | **CONCLUÍDO** | 2026-04-08 | 2026-04-08 |
+| 4 | M3 Materiais | **CONCLUÍDO** | 2026-04-08 | 2026-04-08 |
+| 5 | M5 Feed Pessoal | **CONCLUÍDO** | 2026-04-08 | 2026-04-08 |
+| 6 | M4 Cobrança Core | **CONCLUÍDO** | 2026-04-08 | 2026-04-08 |
+| 7 | M4 Cobrança Completo | EM PROGRESSO | 2026-04-08 | — |
 | 8 | Integração + Polimento | PENDENTE | — | — |
 | 9 | Testes + Beta | PENDENTE | — | — |
 

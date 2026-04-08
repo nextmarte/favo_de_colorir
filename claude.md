@@ -565,6 +565,44 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 
 ---
 
+## Decisões Arquiteturais (Sprint 1-6)
+
+### Padrão de Services + Providers
+- Cada módulo tem um `Service` (acesso Supabase) + `Provider` (Riverpod)
+- Services: `auth_service.dart`, `profile_service.dart`, `policy_service.dart`, `agenda_service.dart`, `reposition_service.dart`, `material_service.dart`, `feed_service.dart`, `billing_service.dart`
+- Providers ficam no próprio arquivo do service (não em arquivo separado)
+- Telas usam `ConsumerWidget` ou `ConsumerStatefulWidget` para acessar providers
+
+### Trigger handle_new_user
+- Ao registrar no Supabase Auth, um trigger auto-cria o profile com status `pending`
+- Metadata do signup (full_name, phone, birth_date) é passada via `raw_user_meta_data`
+
+### Fluxo de Auth
+- Signup → Policies → Pending → Admin aprova → Home
+- Login verifica: blocked? → erro. pending? → /pending. policies aceitas? → / ou /policies
+- Router usa `refreshListenable` que escuta `authStateProvider`
+
+### Reposição e Lista de Espera
+- DB function `can_request_reposition` limita 1/mês (com admin override)
+- Trigger `on_presence_declined` auto-avança lista de espera
+- DB function `advance_waitlist` notifica próxima da fila com 24h para aceitar
+- pg_cron não habilitado ainda — crons comentados nas migrations
+
+### Cobrança
+- Edge function `totalizar-cobranca` calcula: mensalidade + argila (view) + queimas (view)
+- Cria cobranças e itens automaticamente por aluna
+- Fluxo: draft → admin confirma → notifica → aluna paga
+
+### Deploy
+- Supabase cloud: projeto `fhqklezevuqtqenbhsja` (sa-east-1)
+- Migrations via `supabase db push`
+- Seed data via REST API (service_role_key)
+- `.env` sem aspas (flutter_dotenv não aceita)
+- `.env` listado em `pubspec.yaml` assets (necessário para web)
+- Web: `flutter run -d web-server --web-port=5555`
+
+---
+
 **Última atualização:** 8 de Abril de 2026  
 **Versão PRD:** 1.2  
-**Status:** Para desenvolvimento
+**Status:** Sprints 0-6 concluídos, MVP funcional

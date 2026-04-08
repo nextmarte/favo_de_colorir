@@ -1,7 +1,12 @@
 -- ============================================
 -- Cron jobs para notificações de presença
--- Requer pg_cron habilitado no Supabase (Dashboard > Database > Extensions)
+-- Requer pg_cron + pg_net habilitados no Supabase
+-- Dashboard > Database > Extensions > habilitar pg_cron e pg_net
 -- ============================================
+
+-- Habilitar extensões (idempotente)
+CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 
 -- Notificação 24h antes: roda todo dia às 9h (horário de Brasília = 12h UTC)
 SELECT cron.schedule(
