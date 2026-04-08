@@ -122,9 +122,7 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.photo_library_outlined,
                     label: 'Meu Feed',
                     color: FavoColors.terracotta,
-                    onTap: () {
-                      // TODO: navigate to feed (Sprint 5)
-                    },
+                    onTap: () => context.go('/feed'),
                   ),
                 ),
               ],
