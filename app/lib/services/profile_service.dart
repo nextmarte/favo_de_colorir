@@ -81,4 +81,10 @@ class ProfileService {
   Future<void> rejectProfile(String userId) async {
     await updateProfile(userId, {'status': 'blocked'});
   }
+
+  Future<void> deleteAccount(String userId) async {
+    await _client.rpc('delete_user_account', params: {
+      'p_user_id': userId,
+    });
+  }
 }

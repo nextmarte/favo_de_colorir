@@ -137,6 +137,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () => _deleteAccount(context, ref, profile),
+              icon: const Icon(Icons.delete_forever, size: 18),
+              label: const Text('Excluir minha conta (LGPD)'),
+              style: TextButton.styleFrom(
+                foregroundColor: FavoColors.error,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -219,6 +231,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteAccount(
+      BuildContext context, WidgetRef ref, Profile profile) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir conta'),
+        content: const Text(
+          'Isso vai remover permanentemente todos os seus dados: '
+          'perfil, presenças, materiais, feed e pagamentos. '
+          'Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: FavoColors.error),
+            child: const Text('Excluir permanentemente'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref
+          .read(profileServiceProvider)
+          .deleteAccount(profile.id);
+      await ref.read(authServiceProvider).signOut();
+      if (context.mounted) context.go('/login');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir: $e')),
+        );
+      }
     }
   }
 
