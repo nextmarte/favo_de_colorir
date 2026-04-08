@@ -15,45 +15,74 @@ class FeedScreen extends ConsumerWidget {
     final feedAsync = ref.watch(myFeedProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meu Feed'),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Meu Feed',
+                      style: Theme.of(context).textTheme.headlineLarge),
+                  const SizedBox(height: 4),
+                  Text(
+                    'A história das suas criações, peça por peça.',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Expanded(
+              child: feedAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Erro: $e')),
+                data: (entries) {
+                  if (entries.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.auto_awesome,
+                              size: 48,
+                              color: FavoColors.onSurfaceVariant
+                                  .withAlpha(80)),
+                          const SizedBox(height: 16),
+                          Text('Seu feed está vazio',
+                              style:
+                                  Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Adicione notas e fotos das suas peças!',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () => ref.refresh(myFeedProvider.future),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) =>
+                          _FeedCard(entry: entries[index]),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateDialog(context, ref),
-        backgroundColor: FavoColors.honey,
         child: const Icon(Icons.add),
-      ),
-      body: feedAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
-        data: (entries) {
-          if (entries.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.photo_library_outlined,
-                      size: 64, color: FavoColors.warmGray),
-                  SizedBox(height: 16),
-                  Text('Seu feed está vazio'),
-                  SizedBox(height: 8),
-                  Text('Adicione notas e fotos das suas peças!'),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(myFeedProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: entries.length,
-              itemBuilder: (context, index) {
-                return _FeedEntryCard(entry: entries[index]);
-              },
-            ),
-          );
-        },
       ),
     );
   }
@@ -104,7 +133,8 @@ class FeedScreen extends ConsumerWidget {
                           color: color,
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(width: 3, color: FavoColors.honey)
+                              ? Border.all(
+                                  width: 3, color: FavoColors.primary)
                               : null,
                         ),
                       ),
@@ -146,7 +176,6 @@ class FeedScreen extends ConsumerWidget {
         noteColor: selectedColor,
         isPublic: isPublic,
       );
-
       ref.invalidate(myFeedProvider);
     } catch (e) {
       if (context.mounted) {
@@ -158,127 +187,95 @@ class FeedScreen extends ConsumerWidget {
   }
 }
 
-class _FeedEntryCard extends ConsumerWidget {
+class _FeedCard extends ConsumerWidget {
   final FeedEntry entry;
 
-  const _FeedEntryCard({required this.entry});
+  const _FeedCard({required this.entry});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bgColor = entry.noteColor != null
-        ? Color(int.parse(entry.noteColor!.replaceFirst('#', '0xFF')))
-        : null;
-
-    return Card(
-      color: bgColor,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Icon(
-                  _typeIcon(entry.entryType),
-                  size: 18,
-                  color: FavoColors.warmGray,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: FavoColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Photos
+          if (entry.photos != null && entry.photos!.isNotEmpty)
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.network(
+                  ref
+                      .read(feedServiceProvider)
+                      .getPhotoUrl(entry.photos!.first.storagePath),
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  _typeLabel(entry.entryType),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const Spacer(),
-                Text(
-                  DateFormat('dd/MM HH:mm').format(entry.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+              ),
             ),
 
-            if (entry.content != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                entry.content!,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
-
-            // Photos
-            if (entry.photos != null && entry.photos!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 120,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: entry.photos!.length,
-                  itemBuilder: (context, index) {
-                    final photo = entry.photos![index];
-                    final url = ref
-                        .read(feedServiceProvider)
-                        .getPhotoUrl(photo.storagePath);
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          url,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-
-            // Footer
-            const SizedBox(height: 8),
-            Row(
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (entry.isPublic)
-                  const Chip(
-                    label: Text('Publicado', style: TextStyle(fontSize: 10)),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
+                if (entry.content != null) ...[
+                  Text(
+                    _truncateTitle(entry.content!),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  onPressed: () async {
-                    await ref
-                        .read(feedServiceProvider)
-                        .deleteEntry(entry.id);
-                    ref.invalidate(myFeedProvider);
-                  },
+                  if (entry.content!.length > 40) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      entry.content!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      DateFormat('dd MMM yyyy', 'pt_BR')
+                          .format(entry.createdAt),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    if (entry.isPublic) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: FavoColors.primary.withAlpha(15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('Público',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: FavoColors.primary)),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  IconData _typeIcon(FeedEntryType type) {
-    return switch (type) {
-      FeedEntryType.classNote => Icons.school,
-      FeedEntryType.pieceUpdate => Icons.palette,
-      FeedEntryType.photo => Icons.photo,
-      FeedEntryType.quickNote => Icons.note,
-    };
-  }
-
-  String _typeLabel(FeedEntryType type) {
-    return switch (type) {
-      FeedEntryType.classNote => 'Nota de aula',
-      FeedEntryType.pieceUpdate => 'Atualização de peça',
-      FeedEntryType.photo => 'Foto',
-      FeedEntryType.quickNote => 'Nota rápida',
-    };
+  String _truncateTitle(String content) {
+    final firstLine = content.split('\n').first;
+    return firstLine.length > 40 ? firstLine.substring(0, 40) : firstLine;
   }
 }

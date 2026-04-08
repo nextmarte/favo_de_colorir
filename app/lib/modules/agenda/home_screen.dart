@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
+import '../../models/presenca.dart';
 import '../../services/agenda_service.dart';
-import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -17,230 +16,339 @@ class HomeScreen extends ConsumerWidget {
     final nextAulaAsync = ref.watch(nextAulaProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Favo de Colorir'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await ref.read(authServiceProvider).signOut();
-              if (context.mounted) context.go('/login');
-            },
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(currentProfileProvider);
+            ref.invalidate(nextAulaProvider);
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: FavoColors.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.local_florist,
+                        color: FavoColors.onPrimary, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('Artisanal Studio',
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              // Greeting
+              profileAsync.when(
+                data: (profile) {
+                  final firstName =
+                      profile?.fullName.split(' ').first ?? '';
+                  return RichText(
+                    text: TextSpan(
+                      style: Theme.of(context).textTheme.headlineLarge,
+                      children: [
+                        const TextSpan(text: 'Olá, '),
+                        TextSpan(
+                          text: '$firstName.',
+                          style: const TextStyle(
+                            color: FavoColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                loading: () => Text('Olá!',
+                    style: Theme.of(context).textTheme.headlineLarge),
+                error: (_, _) => Text('Olá!',
+                    style: Theme.of(context).textTheme.headlineLarge),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Seu refúgio criativo está pronto para hoje.',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 24),
+
+              // Próxima aula card
+              nextAulaAsync.when(
+                data: (next) {
+                  if (next == null) {
+                    return _EmptyAulaCard();
+                  }
+                  return _NextAulaCard(item: next);
+                },
+                loading: () => Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: FavoColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child:
+                      const Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, _) => _EmptyAulaCard(),
+              ),
+              const SizedBox(height: 20),
+
+              // Quick actions
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionChip(
+                      icon: Icons.swap_horiz,
+                      label: 'Repor Aula',
+                      onTap: () => context.go('/agenda/reposition'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ActionChip(
+                      icon: Icons.history,
+                      label: 'Histórico',
+                      onTap: () => context.go('/feed'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              // Admin section
+              profileAsync.when(
+                data: (profile) {
+                  if (profile == null) return const SizedBox.shrink();
+                  if (!profile.isAdmin && !profile.isTeacher) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (profile.isAdmin) ...[
+                        Text('Administração',
+                            style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        _buildAdminGrid(context),
+                        const SizedBox(height: 20),
+                      ],
+                      if (profile.isTeacher || profile.isAdmin) ...[
+                        _ActionChip(
+                          icon: Icons.dashboard_outlined,
+                          label: 'Dashboard do Dia',
+                          onTap: () => context.go('/teacher/dashboard'),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminGrid(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 2.2,
+      children: [
+        _AdminCard(
+          icon: Icons.manage_accounts,
+          label: 'Usuários',
+          onTap: () => context.go('/admin/users'),
+        ),
+        _AdminCard(
+          icon: Icons.people_outline,
+          label: 'Cadastros',
+          onTap: () => context.go('/admin/approvals'),
+        ),
+        _AdminCard(
+          icon: Icons.class_outlined,
+          label: 'Turmas',
+          onTap: () => context.go('/admin/turmas'),
+        ),
+        _AdminCard(
+          icon: Icons.attach_money,
+          label: 'Financeiro',
+          onTap: () => context.go('/admin/billing'),
+        ),
+      ],
+    );
+  }
+}
+
+class _NextAulaCard extends StatelessWidget {
+  final AulaWithTurma item;
+
+  const _NextAulaCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final confirmation = item.minhaPresenca?.confirmation;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: FavoColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('PRÓXIMA AULA',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        letterSpacing: 1.5,
+                        color: FavoColors.onSurfaceVariant,
+                      )),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: FavoColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Hoje',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(color: FavoColors.onPrimary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            item.turma.name,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.access_time,
+                  size: 16, color: FavoColors.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Text(
+                '${item.aula.startTime.substring(0, 5)} – ${item.aula.endTime.substring(0, 5)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(width: 16),
+              Icon(Icons.people_outline,
+                  size: 16, color: FavoColors.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Text('${item.turma.capacity}',
+                  style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: confirmation == ConfirmationStatus.confirmed
+                        ? null
+                        : () {},
+                    child: const Text('Vou'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton(
+                    onPressed: confirmation == ConfirmationStatus.declined
+                        ? null
+                        : () {},
+                    child: const Text('Não Vou'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(currentProfileProvider);
-          ref.invalidate(nextAulaProvider);
-        },
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+    );
+  }
+}
+
+class _EmptyAulaCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: FavoColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.event_available,
+              size: 40, color: FavoColors.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text('Sem aulas agendadas esta semana.',
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: FavoColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Welcome + próxima aula
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    profileAsync.when(
-                      data: (profile) => Text(
-                        'Bem-vinda, ${profile?.fullName.split(' ').first ?? ''}!',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      loading: () => Text(
-                        'Bem-vinda!',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      error: (_, _) => Text(
-                        'Bem-vinda!',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    nextAulaAsync.when(
-                      data: (next) {
-                        if (next == null) {
-                          return Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: FavoColors.honeyLight.withAlpha(80),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.event_available,
-                                    color: FavoColors.honey),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Sem aulas agendadas esta semana.',
-                                    style:
-                                        Theme.of(context).textTheme.bodyLarge,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                        final dateStr = DateFormat('EEEE, d/MM', 'pt_BR')
-                            .format(next.aula.scheduledDate);
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: FavoColors.honeyLight.withAlpha(80),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.schedule,
-                                  color: FavoColors.honeyDark),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Próxima aula',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall),
-                                    Text(
-                                      '${next.turma.name} · $dateStr',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.w600),
-                                    ),
-                                    Text(
-                                      '${next.aula.startTime.substring(0, 5)} – ${next.aula.endTime.substring(0, 5)}',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      loading: () => const LinearProgressIndicator(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Atalhos rápidos
-            Text('Ações rápidas',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.swap_horiz,
-                    label: 'Repor Aula',
-                    color: FavoColors.honeyDark,
-                    onTap: () => context.go('/agenda/reposition'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickActionCard(
-                    icon: Icons.note_add_outlined,
-                    label: 'Nova Nota',
-                    color: FavoColors.terracotta,
-                    onTap: () => context.go('/feed'),
-                  ),
-                ),
-              ],
-            ),
-
-            // Admin / Teacher shortcuts
-            profileAsync.when(
-              data: (profile) {
-                if (profile == null) return const SizedBox.shrink();
-                final extras = <Widget>[];
-
-                if (profile.isAdmin) {
-                  extras.addAll([
-                    const SizedBox(height: 24),
-                    Text('Administração',
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.manage_accounts,
-                            label: 'Usuários',
-                            color: FavoColors.terracotta,
-                            onTap: () => context.go('/admin/users'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.people,
-                            label: 'Aprovar\nCadastros',
-                            color: FavoColors.honey,
-                            onTap: () => context.go('/admin/approvals'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.class_,
-                            label: 'Turmas',
-                            color: FavoColors.honeyDark,
-                            onTap: () => context.go('/admin/turmas'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.attach_money,
-                            label: 'Financeiro',
-                            color: FavoColors.success,
-                            onTap: () => context.go('/admin/billing'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ]);
-                }
-
-                if (profile.isTeacher || profile.isAdmin) {
-                  extras.addAll([
-                    const SizedBox(height: 24),
-                    Text('Professora',
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 12),
-                    _QuickActionCard(
-                      icon: Icons.dashboard,
-                      label: 'Dashboard do Dia',
-                      color: FavoColors.honeyDark,
-                      onTap: () => context.go('/teacher/dashboard'),
-                    ),
-                  ]);
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: extras,
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
+            Icon(icon, size: 20, color: FavoColors.primary),
+            const SizedBox(width: 8),
+            Text(label, style: Theme.of(context).textTheme.labelLarge),
           ],
         ),
       ),
@@ -248,40 +356,36 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
+class _AdminCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
   final VoidCallback onTap;
 
-  const _QuickActionCard({
+  const _AdminCard({
     required this.icon,
     required this.label,
-    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: FavoColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: FavoColors.primary),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(label,
+                  style: Theme.of(context).textTheme.labelLarge),
+            ),
+          ],
         ),
       ),
     );

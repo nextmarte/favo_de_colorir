@@ -13,68 +13,134 @@ class MyAgendaScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final aulasAsync = ref.watch(myWeekAulasProvider);
+    final now = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Minha Agenda'),
-      ),
-      body: aulasAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Erro: $error')),
-        data: (aulas) {
-          if (aulas.isEmpty) {
-            return const Center(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.calendar_today, size: 64, color: FavoColors.warmGray),
-                  SizedBox(height: 16),
-                  Text('Nenhuma aula esta semana'),
+                  Text('Minha Agenda',
+                      style: Theme.of(context).textTheme.headlineLarge),
+                  const SizedBox(height: 4),
+                  Text('Seu tempo de criação nesta semana.',
+                      style: Theme.of(context).textTheme.bodyLarge),
                 ],
               ),
-            );
-          }
-
-          // Agrupar por dia
-          final grouped = <String, List<AulaWithTurma>>{};
-          for (final item in aulas) {
-            final key = DateFormat('EEEE, d/MM', 'pt_BR')
-                .format(item.aula.scheduledDate);
-            (grouped[key] ??= []).add(item);
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(myWeekAulasProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: grouped.length,
-              itemBuilder: (context, index) {
-                final day = grouped.keys.elementAt(index);
-                final dayAulas = grouped[day]!;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        day,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: FavoColors.honeyDark,
-                            ),
-                      ),
-                    ),
-                    ...dayAulas.map(
-                      (item) => _AulaCard(item: item),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                );
-              },
             ),
-          );
-        },
+            const SizedBox(height: 20),
+
+            // Week calendar strip
+            SizedBox(
+              height: 72,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: 7,
+                itemBuilder: (context, index) {
+                  final day = now
+                      .subtract(Duration(days: now.weekday % 7))
+                      .add(Duration(days: index));
+                  final isToday = day.day == now.day &&
+                      day.month == now.month &&
+                      day.year == now.year;
+                  final dayName =
+                      DateFormat('EEE', 'pt_BR').format(day).toUpperCase();
+
+                  return Container(
+                    width: 48,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: isToday
+                          ? FavoColors.primary
+                          : FavoColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          dayName,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                color: isToday
+                                    ? FavoColors.onPrimary.withAlpha(180)
+                                    : FavoColors.onSurfaceVariant,
+                                fontSize: 10,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${day.day}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                color: isToday
+                                    ? FavoColors.onPrimary
+                                    : FavoColors.onSurface,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Aulas
+            Expanded(
+              child: aulasAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Erro: $e')),
+                data: (aulas) {
+                  if (aulas.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_today,
+                              size: 48,
+                              color: FavoColors.onSurfaceVariant
+                                  .withAlpha(80)),
+                          const SizedBox(height: 16),
+                          Text('Nenhuma aula esta semana',
+                              style: Theme.of(context).textTheme.bodyLarge),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () =>
+                        ref.refresh(myWeekAulasProvider.future),
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      children: [
+                        Text('Aulas do Dia',
+                            style:
+                                Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        ...aulas.map((item) => _AulaCard(item: item)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -87,87 +153,94 @@ class _AulaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confirmacao = item.minhaPresenca?.confirmation;
+    final confirmation = item.minhaPresenca?.confirmation;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: FavoColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: InkWell(
         onTap: () => context.go('/agenda/aula/${item.aula.id}'),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Horário
-              Column(
+        borderRadius: BorderRadius.circular(20),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: FavoColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.palette_outlined,
+                  color: FavoColors.primary, size: 22),
+            ),
+            const SizedBox(width: 14),
+
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(item.turma.name,
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 2),
                   Text(
-                    item.aula.startTime.substring(0, 5),
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    item.aula.endTime.substring(0, 5),
+                    '${item.aula.startTime.substring(0, 5)} – ${item.aula.endTime.substring(0, 5)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
-              const SizedBox(width: 16),
-              Container(
-                width: 3,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _statusColor(confirmacao),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+            ),
+
+            // Status chip
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _statusBg(confirmation),
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(width: 16),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.turma.name,
-                      style: Theme.of(context).textTheme.titleSmall,
+              child: Text(
+                _statusText(confirmation),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: _statusColor(confirmation),
+                      fontWeight: FontWeight.w600,
                     ),
-                    Text(
-                      _statusText(confirmacao),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: _statusColor(confirmacao),
-                          ),
-                    ),
-                  ],
-                ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: FavoColors.warmGray,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Color _statusBg(ConfirmationStatus? status) {
+    return switch (status) {
+      ConfirmationStatus.confirmed =>
+        FavoColors.success.withAlpha(20),
+      ConfirmationStatus.declined => FavoColors.error.withAlpha(20),
+      _ => FavoColors.primary.withAlpha(15),
+    };
   }
 
   Color _statusColor(ConfirmationStatus? status) {
     return switch (status) {
       ConfirmationStatus.confirmed => FavoColors.success,
       ConfirmationStatus.declined => FavoColors.error,
-      ConfirmationStatus.pending || null => FavoColors.honey,
-      ConfirmationStatus.noResponse => FavoColors.warmGray,
+      _ => FavoColors.primary,
     };
   }
 
   String _statusText(ConfirmationStatus? status) {
     return switch (status) {
-      ConfirmationStatus.confirmed => 'Presença confirmada',
-      ConfirmationStatus.declined => 'Não vai',
-      ConfirmationStatus.pending || null => 'Aguardando confirmação',
-      ConfirmationStatus.noResponse => 'Sem resposta',
+      ConfirmationStatus.confirmed => 'CONFIRMADA',
+      ConfirmationStatus.declined => 'NÃO VAI',
+      ConfirmationStatus.pending || null => 'PENDENTE',
+      ConfirmationStatus.noResponse => 'SEM RESP.',
     };
   }
 }

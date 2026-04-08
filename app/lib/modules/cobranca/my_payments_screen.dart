@@ -13,118 +13,149 @@ class MyPaymentsScreen extends ConsumerWidget {
     final billsAsync = ref.watch(myBillsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meus Pagamentos'),
-      ),
-      body: billsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erro: $e')),
-        data: (bills) {
-          if (bills.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: SafeArea(
+        child: billsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Erro: $e')),
+          data: (bills) {
+            final current = bills.isNotEmpty ? bills.first : null;
+            final history = bills.length > 1 ? bills.sublist(1) : <Cobranca>[];
+
+            return RefreshIndicator(
+              onRefresh: () => ref.refresh(myBillsProvider.future),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 children: [
-                  Icon(Icons.receipt_long, size: 64, color: FavoColors.warmGray),
-                  SizedBox(height: 16),
-                  Text('Nenhuma cobrança'),
+                  Text('Meus Pagamentos',
+                      style: Theme.of(context).textTheme.headlineLarge),
+                  if (current != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ciclo: ${current.monthYear}',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // Current bill hero
+                  if (current != null) ...[
+                    _CurrentBillCard(bill: current),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: FavoColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.receipt_long,
+                              size: 48,
+                              color: FavoColors.onSurfaceVariant
+                                  .withAlpha(80)),
+                          const SizedBox(height: 16),
+                          Text('Nenhuma cobrança',
+                              style:
+                                  Theme.of(context).textTheme.bodyLarge),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // History
+                  if (history.isNotEmpty) ...[
+                    Text('Histórico',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    ...history.map((bill) => _HistoryRow(bill: bill)),
+                  ],
                 ],
               ),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(myBillsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: bills.length,
-              itemBuilder: (context, index) {
-                return _BillCard(bill: bills[index]);
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }
 }
 
-class _BillCard extends ConsumerWidget {
+class _CurrentBillCard extends ConsumerWidget {
   final Cobranca bill;
 
-  const _BillCard({required this.bill});
+  const _CurrentBillCard({required this.bill});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  bill.monthYear,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                Chip(
-                  label: Text(
-                    _statusLabel(bill.status),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: _statusColor(bill.status),
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: FavoColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          // Status chip
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: _statusColor(bill.status).withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _statusLabel(bill.status).toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: _statusColor(bill.status),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
                   ),
-                  backgroundColor: _statusColor(bill.status).withAlpha(25),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
             ),
-            const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 16),
 
-            _AmountRow('Mensalidade', bill.planAmount),
-            _AmountRow('Argila', bill.clayAmount),
-            _AmountRow('Queimas', bill.firingAmount),
-            const Divider(height: 16),
-            Row(
-              children: [
-                Text('Total',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                const Spacer(),
-                Text(
-                  'R\$ ${bill.totalAmount.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: FavoColors.honeyDark,
-                      ),
+          // Total
+          Text(
+            'R\$',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: FavoColors.onSurfaceVariant,
                 ),
-              ],
-            ),
+          ),
+          Text(
+            bill.totalAmount.toStringAsFixed(2).replaceAll('.', ','),
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 20),
 
-            if (bill.isPending) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showPaymentDialog(context, ref),
-                  icon: const Icon(Icons.pix),
-                  label: const Text('Pagar'),
-                ),
+          // Breakdown
+          _BreakdownRow(
+            label: 'Plano Mensal (Usabilidade Livre)',
+            value: bill.planAmount,
+          ),
+          _BreakdownRow(label: 'Argila (3 kg)', value: bill.clayAmount),
+          _BreakdownRow(
+              label: 'Queimas (2 peças)', value: bill.firingAmount),
+          const SizedBox(height: 20),
+
+          // Pay button
+          if (bill.isPending)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _pay(context, ref),
+                icon: const Icon(Icons.pix, size: 18),
+                label: const Text('Pagar com Pix'),
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 
-  Future<void> _showPaymentDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _pay(BuildContext context, WidgetRef ref) async {
     final method = await showDialog<PaymentMethod>(
       context: context,
       builder: (context) => AlertDialog(
@@ -156,7 +187,6 @@ class _BillCard extends ConsumerWidget {
           .read(billingServiceProvider)
           .registerPayment(bill.id, method, null);
       ref.invalidate(myBillsProvider);
-
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pagamento registrado!')),
@@ -186,28 +216,71 @@ class _BillCard extends ConsumerWidget {
     return switch (status) {
       CobrancaStatus.paid => FavoColors.success,
       CobrancaStatus.overdue => FavoColors.error,
-      CobrancaStatus.cancelled => FavoColors.warmGray,
-      _ => FavoColors.honey,
+      _ => FavoColors.primary,
     };
   }
 }
 
-class _AmountRow extends StatelessWidget {
+class _BreakdownRow extends StatelessWidget {
   final String label;
-  final double amount;
+  final double value;
 
-  const _AmountRow(this.label, this.amount);
+  const _BreakdownRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const Spacer(),
-          Text('R\$ ${amount.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.bodyMedium),
+          Expanded(
+            child:
+                Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          Text(
+            'R\$ ${value.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  final Cobranca bill;
+
+  const _HistoryRow({required this.bill});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: FavoColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            bill.isPaid ? Icons.check_circle : Icons.hourglass_empty,
+            size: 20,
+            color: bill.isPaid ? FavoColors.success : FavoColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(bill.monthYear,
+                style: Theme.of(context).textTheme.titleSmall),
+          ),
+          Text(
+            'R\$ ${bill.totalAmount.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
         ],
       ),
     );

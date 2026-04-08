@@ -15,63 +15,55 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  bool _isLoading = false;
-  bool _isEditing = false;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meu Perfil'),
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => setState(() => _isEditing = true),
-            ),
-        ],
-      ),
-      body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Erro: $error')),
-        data: (profile) {
-          if (profile == null) {
-            return const Center(child: Text('Perfil não encontrado'));
-          }
-
-          if (!_isEditing) {
-            return _buildProfileView(context, profile);
-          }
-
-          _nameController.text = profile.fullName;
-          _phoneController.text = profile.phone ?? '';
-
-          return _buildProfileEdit(context, profile);
-        },
+      body: SafeArea(
+        child: profileAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(child: Text('Erro: $error')),
+          data: (profile) {
+            if (profile == null) {
+              return const Center(child: Text('Perfil não encontrado'));
+            }
+            return _buildProfile(context, profile);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildProfileView(BuildContext context, Profile profile) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // Avatar
-          CircleAvatar(
+  Widget _buildProfile(BuildContext context, Profile profile) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: FavoColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.local_florist,
+                  color: FavoColors.onPrimary, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Text('Favo de Colorir',
+                style: Theme.of(context).textTheme.titleSmall),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Avatar
+        Center(
+          child: CircleAvatar(
             radius: 48,
-            backgroundColor: FavoColors.honeyLight,
+            backgroundColor: FavoColors.primaryContainer,
             backgroundImage: profile.avatarUrl != null
                 ? NetworkImage(profile.avatarUrl!)
                 : null,
@@ -82,152 +74,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         : '?',
                     style: const TextStyle(
                       fontSize: 36,
-                      color: FavoColors.honeyDark,
+                      color: FavoColors.onPrimary,
+                      fontWeight: FontWeight.w700,
                     ),
                   )
                 : null,
           ),
-          const SizedBox(height: 16),
-          Text(
-            profile.fullName,
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            profile.email,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 4),
-          Chip(
-            label: Text(
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Text(profile.fullName,
+              style: Theme.of(context).textTheme.headlineMedium),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child:
+              Text(profile.email, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+        const SizedBox(height: 16),
+
+        // Plan badge
+        Center(
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: FavoColors.primary,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
               _roleLabel(profile.role),
-              style: const TextStyle(fontSize: 12),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: FavoColors.onPrimary,
+                  ),
             ),
-            backgroundColor: FavoColors.honeyLight,
           ),
-          const SizedBox(height: 32),
+        ),
+        const SizedBox(height: 28),
 
-          // Info cards
-          _InfoTile(icon: Icons.phone, label: 'Telefone', value: profile.phone ?? 'Não informado'),
-          _InfoTile(
-            icon: Icons.cake,
-            label: 'Nascimento',
-            value: profile.birthDate != null
-                ? '${profile.birthDate!.day.toString().padLeft(2, '0')}/${profile.birthDate!.month.toString().padLeft(2, '0')}/${profile.birthDate!.year}'
-                : 'Não informado',
-          ),
-          _InfoTile(icon: Icons.badge, label: 'Status', value: _statusLabel(profile.status)),
+        // Notification settings
+        Text('Notification Settings',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 12),
 
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await ref.read(authServiceProvider).signOut();
-                if (context.mounted) context.go('/login');
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text('Sair da conta'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: FavoColors.error,
-              ),
+        _SettingToggle(
+          icon: Icons.calendar_today_outlined,
+          label: 'Class confirmations',
+          value: true,
+          onChanged: (_) {},
+        ),
+        _SettingToggle(
+          icon: Icons.receipt_long_outlined,
+          label: 'Payments & Invoices',
+          value: true,
+          onChanged: (_) {},
+        ),
+        const SizedBox(height: 20),
+
+        // Menu items
+        _MenuItem(
+          icon: Icons.settings_outlined,
+          label: 'Account Settings',
+          onTap: () {},
+        ),
+        _MenuItem(
+          icon: Icons.help_outline,
+          label: 'Help Center',
+          onTap: () {},
+        ),
+        const SizedBox(height: 24),
+
+        // Logout
+        Center(
+          child: TextButton.icon(
+            onPressed: () async {
+              await ref.read(authServiceProvider).signOut();
+              if (context.mounted) context.go('/login');
+            },
+            icon: const Icon(Icons.logout, size: 18),
+            label: const Text('Logout'),
+            style: TextButton.styleFrom(
+              foregroundColor: FavoColors.error,
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton.icon(
-              onPressed: () => _deleteAccount(context, ref, profile),
-              icon: const Icon(Icons.delete_forever, size: 18),
-              label: const Text('Excluir minha conta (LGPD)'),
-              style: TextButton.styleFrom(
-                foregroundColor: FavoColors.error,
-              ),
+        ),
+        const SizedBox(height: 8),
+
+        // LGPD
+        Center(
+          child: TextButton(
+            onPressed: () => _deleteAccount(context, ref, profile),
+            child: Text(
+              'Excluir minha conta',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: FavoColors.onSurfaceVariant.withAlpha(128),
+                    decoration: TextDecoration.underline,
+                  ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
-  }
-
-  Widget _buildProfileEdit(BuildContext context, Profile profile) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nome completo',
-              prefixIcon: Icon(Icons.person_outlined),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Telefone',
-              prefixIcon: Icon(Icons.phone_outlined),
-            ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => setState(() => _isEditing = false),
-                  child: const Text('Cancelar'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : () => _save(profile.id),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Salvar'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _save(String userId) async {
-    setState(() => _isLoading = true);
-
-    try {
-      await ref.read(profileServiceProvider).updateProfile(userId, {
-        'full_name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim().isNotEmpty
-            ? _phoneController.text.trim()
-            : null,
-      });
-
-      ref.invalidate(currentProfileProvider);
-      setState(() => _isEditing = false);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Perfil atualizado!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Future<void> _deleteAccount(
@@ -237,8 +184,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Excluir conta'),
         content: const Text(
-          'Isso vai remover permanentemente todos os seus dados: '
-          'perfil, presenças, materiais, feed e pagamentos. '
+          'Isso vai remover permanentemente todos os seus dados. '
           'Esta ação não pode ser desfeita.',
         ),
         actions: [
@@ -258,9 +204,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (confirmed != true) return;
 
     try {
-      await ref
-          .read(profileServiceProvider)
-          .deleteAccount(profile.id);
+      await ref.read(profileServiceProvider).deleteAccount(profile.id);
       await ref.read(authServiceProvider).signOut();
       if (context.mounted) context.go('/login');
     } catch (e) {
@@ -277,47 +221,86 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       UserRole.admin => 'Administradora',
       UserRole.teacher => 'Professora',
       UserRole.assistant => 'Assistente',
-      UserRole.student => 'Aluna',
-    };
-  }
-
-  String _statusLabel(UserStatus status) {
-    return switch (status) {
-      UserStatus.active => 'Ativa',
-      UserStatus.pending => 'Pendente',
-      UserStatus.inactive => 'Inativa',
-      UserStatus.blocked => 'Bloqueada',
+      UserRole.student => 'Mensal',
     };
   }
 }
 
-class _InfoTile extends StatelessWidget {
+class _SettingToggle extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String value;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
-  const _InfoTile({
+  const _SettingToggle({
     required this.icon,
     required this.label,
     required this.value,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: FavoColors.warmGray),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: FavoColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: FavoColors.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Expanded(
+              child:
+                  Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            ),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: FavoColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
             children: [
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
-              Text(value, style: Theme.of(context).textTheme.bodyLarge),
+              Icon(icon, size: 20, color: FavoColors.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(label,
+                    style: Theme.of(context).textTheme.bodyMedium),
+              ),
+              const Icon(Icons.chevron_right,
+                  size: 20, color: FavoColors.onSurfaceVariant),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
