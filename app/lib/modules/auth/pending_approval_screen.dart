@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class PendingApprovalScreen extends StatelessWidget {
+import '../../core/theme.dart';
+import '../../services/auth_service.dart';
+
+class PendingApprovalScreen extends ConsumerWidget {
   const PendingApprovalScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -44,6 +48,15 @@ class PendingApprovalScreen extends StatelessWidget {
                   'Você receberá uma notificação quando sua conta for ativada.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                TextButton.icon(
+                  onPressed: () async {
+                    await ref.read(authServiceProvider).signOut();
+                    if (context.mounted) context.go('/login');
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sair'),
                 ),
               ],
             ),

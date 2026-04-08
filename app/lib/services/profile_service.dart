@@ -1,0 +1,84 @@
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../core/supabase_client.dart';
+import '../models/profile.dart';
+import 'auth_service.dart';
+
+final profileServiceProvider = Provider<ProfileService>((ref) {
+  return ProfileService();
+});
+
+final currentProfileProvider = FutureProvider<Profile?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  return authState.when(
+    data: (state) {
+      final userId = state.session?.user.id;
+      if (userId == null) return null;
+      return ref.read(profileServiceProvider).getProfile(userId);
+    },
+    loading: () => null,
+    error: (_, _) => null,
+  );
+});
+
+final pendingProfilesProvider = FutureProvider<List<Profile>>((ref) {
+  ref.watch(authStateProvider);
+  return ref.read(profileServiceProvider).getPendingProfiles();
+});
+
+class ProfileService {
+  SupabaseClient get _client => SupabaseConfig.client;
+
+  Future<Profile> getProfile(String userId) async {
+    final data = await _client
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .single();
+    return Profile.fromJson(data);
+  }
+
+  Future<void> updateProfile(String userId, Map<String, dynamic> updates) async {
+    await _client
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
+  }
+
+  Future<String> uploadAvatar(String userId, File file) async {
+    final ext = file.path.split('.').last;
+    final path = '$userId/avatar.$ext';
+
+    await SupabaseConfig.storage
+        .from('avatars')
+        .upload(path, file, fileOptions: const FileOptions(upsert: true));
+
+    final publicUrl = SupabaseConfig.storage
+        .from('avatars')
+        .getPublicUrl(path);
+
+    await updateProfile(userId, {'avatar_url': publicUrl});
+
+    return publicUrl;
+  }
+
+  Future<List<Profile>> getPendingProfiles() async {
+    final data = await _client
+        .from('profiles')
+        .select()
+        .eq('status', 'pending')
+        .order('created_at');
+    return data.map((json) => Profile.fromJson(json)).toList();
+  }
+
+  Future<void> approveProfile(String userId) async {
+    await updateProfile(userId, {'status': 'active'});
+  }
+
+  Future<void> rejectProfile(String userId) async {
+    await updateProfile(userId, {'status': 'blocked'});
+  }
+}

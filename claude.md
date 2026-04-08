@@ -489,6 +489,82 @@ supabase functions deploy                # Edge Functions
 
 ---
 
-**Última atualização:** 6 de Abril de 2026  
+## Princípios de Trabalho com IA
+
+> Baseado em: [Do Zero à Pós-Produção em 1 Semana — Akita](https://akitaonrails.com/2026/02/20/do-zero-a-pos-producao-em-1-semana-como-usar-ia-em-projetos-de-verdade-bastidores-do-the-m-akita-chronicles/)
+
+### 1. Pair Programming com IA
+
+O desenvolvedor é o piloto; a IA é copiloto. Você toma as decisões arquiteturais, a IA ajuda a executar. Nunca delegue o entendimento — se você não entende o que foi gerado, não aceite.
+
+### 2. Iteração Curta
+
+Trabalhe em ciclos de 1-2 horas: implementar → revisar → testar → commit. Nada de planejar 2 semanas antes de escrever código. Qualidade emerge de ciclos curtos com feedback rápido.
+
+### 3. CLAUDE.md como Especificação Viva
+
+Este arquivo deve evoluir junto com o projeto:
+- Documentar decisões arquiteturais tomadas
+- Registrar padrões estabelecidos
+- Evitar que a IA repita erros ou desvios anteriores
+- Atualizar conforme novas descobertas surgem
+
+### 4. Testes Obrigatórios
+
+Código sem testes não é código de produção. Exija testes para cada feature. Valide cobertura. Execute a suite completa antes de cada deploy.
+
+### 5. Code Review Sempre
+
+Nunca aceite código gerado pela IA sem revisar. Procure por:
+- Lógica que parece certa mas está errada
+- Edge cases não tratados
+- Performance inadequada
+- Segurança comprometida
+
+### 6. Princípios XP (Extreme Programming)
+
+- **Simplicidade** — design simples que resolve o problema de hoje
+- **Feedback rápido** — testes automatizados, deploy frequente
+- **Mudança incremental** — pequenos passos, não big bangs
+- **Qualidade incorporada** — qualidade não é adicionada depois, faz parte do processo
+
+### 7. Contexto Explícito
+
+A IA precisa de contexto abundante. Não assuma que ela vai "entender" implicitamente. Sempre defina:
+- Padrões de código preferidos
+- Estrutura de diretórios e convenções
+- Dependências e versões
+- Filosofia e restrições do projeto
+
+### 8. Não Confie em One-Shot
+
+Nenhum prompt perfeito gera código pronto para produção. Sempre será necessário:
+- Múltiplas iterações
+- Correções do desenvolvedor
+- Refinamentos baseados em testes que falham
+- Ajustes quando a IA toma decisões equivocadas
+
+### 9. Entenda o Que Foi Gerado
+
+"O teste passou" não é suficiente. Você precisa compreender completamente o que foi gerado. Se não entende, não mergeia.
+
+### 10. Segurança em Código Gerado
+
+Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
+- Tratamento de entrada do usuário
+- Autenticação e autorização (RLS, tokens)
+- Injeção de dados (SQL, XSS)
+- Exposição de informações sensíveis
+
+### 11. Testes Primeiro, Commits Sempre
+
+- **Testes antes de commitar** — escreva ou atualize testes antes de considerar uma feature pronta
+- **Commit ao terminar cada unidade de trabalho** — não acumule mudanças. Terminou um service? Commit. Terminou uma tela? Commit. Cada commit deve ser atômico e funcional.
+- **Mensagens de commit descritivas** — explique o "porquê", não só o "o quê"
+- **Nunca commitar código que quebra testes existentes**
+
+---
+
+**Última atualização:** 8 de Abril de 2026  
 **Versão PRD:** 1.2  
 **Status:** Para desenvolvimento

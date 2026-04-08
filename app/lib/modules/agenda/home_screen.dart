@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../core/theme.dart';
+import '../../services/auth_service.dart';
+import '../../services/profile_service.dart';
+
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(currentProfileProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Favo de Colorir'),
@@ -17,9 +24,10 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.person_outlined),
-            onPressed: () {
-              // TODO: navigate to profile
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref.read(authServiceProvider).signOut();
+              if (context.mounted) context.go('/login');
             },
           ),
         ],
@@ -36,9 +44,19 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bem-vinda!',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    profileAsync.when(
+                      data: (profile) => Text(
+                        'Bem-vinda, ${profile?.fullName.split(' ').first ?? ''}!',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      loading: () => Text(
+                        'Bem-vinda!',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      error: (_, _) => Text(
+                        'Bem-vinda!',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(

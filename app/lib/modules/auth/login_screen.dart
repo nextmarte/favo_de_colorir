@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LoginScreen extends StatefulWidget {
+import '../../core/theme.dart';
+import '../../models/profile.dart';
+import '../../services/auth_service.dart';
+import '../../services/policy_service.dart';
+import '../../services/profile_service.dart';
+
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -117,9 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // TODO: implement forgot password
-                      },
+                      onPressed: _handleForgotPassword,
                       child: const Text('Esqueci minha senha'),
                     ),
                   ),
@@ -170,8 +175,51 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: implement Supabase auth login
-      if (mounted) context.go('/');
+      final authService = ref.read(authServiceProvider);
+      await authService.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (!mounted) return;
+
+      final userId = authService.currentUser!.id;
+      final profileService = ref.read(profileServiceProvider);
+      final profile = await profileService.getProfile(userId);
+
+      if (!mounted) return;
+
+      if (profile.status == UserStatus.blocked) {
+        await authService.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sua conta foi bloqueada. Entre em contato com o ateliê.')),
+          );
+        }
+        return;
+      }
+
+      if (profile.status == UserStatus.pending) {
+        context.go('/pending');
+        return;
+      }
+
+      final policyService = ref.read(policyServiceProvider);
+      final hasAccepted = await policyService.hasAcceptedAll(userId);
+
+      if (!mounted) return;
+
+      if (!hasAccepted) {
+        context.go('/policies');
+      } else {
+        context.go('/');
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao entrar: ${e.message}')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -180,6 +228,31 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha seu e-mail primeiro')),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(authServiceProvider).resetPassword(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('E-mail de recuperação enviado!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e')),
+        );
+      }
     }
   }
 }
