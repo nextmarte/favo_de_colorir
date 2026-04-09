@@ -99,33 +99,22 @@ class _AdminNotificationsScreenState
     setState(() => _isLoading = true);
 
     try {
-      // Buscar todas as alunas ativas
-      final profiles = await SupabaseConfig.client
-          .from('profiles')
-          .select('id')
-          .eq('status', 'active');
+      final response = await SupabaseConfig.client.functions.invoke(
+        'enviar-recado',
+        body: {
+          'title': _titleCtrl.text.trim(),
+          'body': _bodyCtrl.text.trim(),
+        },
+      );
 
-      // Criar notificação para cada uma
-      final notifications = (profiles as List).map((p) => {
-            'user_id': p['id'],
-            'title': _titleCtrl.text.trim(),
-            'body': _bodyCtrl.text.trim(),
-            'type': 'general',
-            'data': {},
-          });
-
-      await SupabaseConfig.client
-          .from('notifications')
-          .insert(notifications.toList());
+      final sent = (response.data as Map<String, dynamic>)['sent'] ?? 0;
 
       _titleCtrl.clear();
       _bodyCtrl.clear();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Recado enviado para ${profiles.length} pessoas!')),
+          SnackBar(content: Text('Recado enviado para $sent pessoas!')),
         );
         setState(() {});
       }
