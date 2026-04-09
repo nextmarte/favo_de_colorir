@@ -6,6 +6,7 @@ import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/presenca.dart';
 import '../../services/agenda_service.dart';
+import '../../services/offline_sync_service.dart';
 import '../../services/profile_service.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -151,6 +152,8 @@ class HomeScreen extends ConsumerWidget {
                           label: 'Dashboard do Dia',
                           onTap: () => context.push('/teacher/dashboard'),
                         ),
+                        const SizedBox(height: 12),
+                        _SyncButton(),
                         const SizedBox(height: 20),
                       ],
                     ],
@@ -395,6 +398,58 @@ class _ActionChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SyncButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pendingAsync = ref.watch(pendingSyncCountProvider);
+
+    return pendingAsync.when(
+      data: (count) {
+        if (count == 0) return const SizedBox.shrink();
+        return GestureDetector(
+          onTap: () async {
+            final result = await ref.read(offlineSyncProvider).syncAll();
+            ref.invalidate(pendingSyncCountProvider);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${result.synced} registros sincronizados!')),
+              );
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(
+              color: FavoColors.warning.withAlpha(25),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.sync, size: 20, color: FavoColors.warning),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$count registro${count > 1 ? 's' : ''} pendente${count > 1 ? 's' : ''} de sync',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: FavoColors.warning,
+                        ),
+                  ),
+                ),
+                Text('Sincronizar',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: FavoColors.primary,
+                          fontWeight: FontWeight.bold,
+                        )),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

@@ -5,6 +5,7 @@ import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/peca.dart';
 import '../../services/material_service.dart';
+import '../../services/offline_sync_service.dart';
 
 class RegisterMaterialsScreen extends ConsumerStatefulWidget {
   final String aulaId;
@@ -228,14 +229,19 @@ class _RegisterMaterialsScreenState
     }
 
     setState(() => _isLoading = true);
+    final kgUsed = double.parse(_kgUsedCtrl.text);
+    final kgReturned = double.tryParse(_kgReturnedCtrl.text) ?? 0;
+    final registeredBy = SupabaseConfig.auth.currentUser!.id;
+
     try {
+      // Tenta online primeiro
       await ref.read(materialServiceProvider).registerClay(
             aulaId: widget.aulaId,
             studentId: widget.studentId,
             tipoArgilaId: _selectedArgilaId!,
-            kgUsed: double.parse(_kgUsedCtrl.text),
-            kgReturned: double.tryParse(_kgReturnedCtrl.text) ?? 0,
-            registeredBy: SupabaseConfig.auth.currentUser!.id,
+            kgUsed: kgUsed,
+            kgReturned: kgReturned,
+            registeredBy: registeredBy,
           );
       _kgUsedCtrl.clear();
       _kgReturnedCtrl.text = '0';
@@ -245,10 +251,29 @@ class _RegisterMaterialsScreenState
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
+      // Falhou online — salva offline
+      try {
+        await ref.read(offlineSyncProvider).saveClay(
+              aulaId: widget.aulaId,
+              studentId: widget.studentId,
+              tipoArgilaId: _selectedArgilaId!,
+              kgUsed: kgUsed,
+              kgReturned: kgReturned,
+              registeredBy: registeredBy,
+            );
+        _kgUsedCtrl.clear();
+        _kgReturnedCtrl.text = '0';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Salvo offline — será sincronizado depois.')),
+          );
+        }
+      } catch (offlineErr) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro: $offlineErr')),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -264,6 +289,9 @@ class _RegisterMaterialsScreenState
     }
 
     setState(() => _isLoading = true);
+    final registeredBy = SupabaseConfig.auth.currentUser!.id;
+    final stageStr = _selectedStage.name;
+
     try {
       await ref.read(materialServiceProvider).registerPiece(
             studentId: widget.studentId,
@@ -271,7 +299,7 @@ class _RegisterMaterialsScreenState
             tipoPecaId: _selectedPecaId!,
             stage: _selectedStage,
             notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-            registeredBy: SupabaseConfig.auth.currentUser!.id,
+            registeredBy: registeredBy,
           );
       _notesCtrl.clear();
       if (mounted) {
@@ -280,10 +308,27 @@ class _RegisterMaterialsScreenState
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
+      try {
+        await ref.read(offlineSyncProvider).savePiece(
+              studentId: widget.studentId,
+              aulaId: widget.aulaId,
+              tipoPecaId: _selectedPecaId!,
+              stage: stageStr,
+              notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+              registeredBy: registeredBy,
+            );
+        _notesCtrl.clear();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Salvo offline — será sincronizado depois.')),
+          );
+        }
+      } catch (offlineErr) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro: $offlineErr')),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
