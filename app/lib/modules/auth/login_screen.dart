@@ -219,6 +219,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
 
+      if (profile == null) {
+        context.go('/pending');
+        return;
+      }
+
       if (profile.status == UserStatus.blocked) {
         await authService.signOut();
         if (mounted) {

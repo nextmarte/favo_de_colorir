@@ -114,11 +114,18 @@ class BillingService {
 
   /// Totalizar cobranças do mês (chama edge function)
   Future<Map<String, dynamic>> totalizeBills(String monthYear) async {
-    final response = await _client.functions.invoke(
-      'totalizar-cobranca',
-      body: {'month_year': monthYear},
-    );
-    return response.data as Map<String, dynamic>;
+    try {
+      final response = await _client.functions.invoke(
+        'totalizar-cobranca',
+        body: {'month_year': monthYear},
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'created': 0, 'error': 'Resposta inesperada'};
+    } catch (e) {
+      return {'created': 0, 'error': e.toString()};
+    }
   }
 
   /// Resumo financeiro do mês (admin)

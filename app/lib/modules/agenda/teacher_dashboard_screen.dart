@@ -180,7 +180,7 @@ class _TurmaDayCard extends ConsumerWidget {
                               tooltip: 'Registrar materiais',
                               onPressed: () {
                                 final encoded = Uri.encodeComponent(p.studentName);
-                                context.go(
+                                context.push(
                                     '/materiais/${aula.aula.id}/${p.presenca.studentId}/$encoded');
                               },
                             ),

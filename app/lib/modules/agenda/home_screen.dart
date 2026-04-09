@@ -149,7 +149,7 @@ class HomeScreen extends ConsumerWidget {
                         _ActionChip(
                           icon: Icons.dashboard_outlined,
                           label: 'Dashboard do Dia',
-                          onTap: () => context.go('/teacher/dashboard'),
+                          onTap: () => context.push('/teacher/dashboard'),
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -178,52 +178,52 @@ class HomeScreen extends ConsumerWidget {
         _AdminCard(
           icon: Icons.manage_accounts,
           label: 'Usuários',
-          onTap: () => context.go('/admin/users'),
+          onTap: () => context.push('/admin/users'),
         ),
         _AdminCard(
           icon: Icons.people_outline,
           label: 'Cadastros',
-          onTap: () => context.go('/admin/approvals'),
+          onTap: () => context.push('/admin/approvals'),
         ),
         _AdminCard(
           icon: Icons.class_outlined,
           label: 'Turmas',
-          onTap: () => context.go('/admin/turmas'),
+          onTap: () => context.push('/admin/turmas'),
         ),
         _AdminCard(
           icon: Icons.attach_money,
           label: 'Financeiro',
-          onTap: () => context.go('/admin/billing'),
+          onTap: () => context.push('/admin/billing'),
         ),
         _AdminCard(
           icon: Icons.person_add,
           label: 'Criar Aluna',
-          onTap: () => context.go('/admin/create-user'),
+          onTap: () => context.push('/admin/create-user'),
         ),
         _AdminCard(
           icon: Icons.settings,
           label: 'Preços',
-          onTap: () => context.go('/admin/config'),
+          onTap: () => context.push('/admin/config'),
         ),
         _AdminCard(
           icon: Icons.forum,
           label: 'Comunidade',
-          onTap: () => context.go('/community'),
+          onTap: () => context.push('/community'),
         ),
         _AdminCard(
           icon: Icons.inventory_2,
           label: 'Estoque',
-          onTap: () => context.go('/stock'),
+          onTap: () => context.push('/stock'),
         ),
         _AdminCard(
           icon: Icons.description,
           label: 'Políticas',
-          onTap: () => context.go('/admin/policies'),
+          onTap: () => context.push('/admin/policies'),
         ),
         _AdminCard(
           icon: Icons.campaign,
           label: 'Recados',
-          onTap: () => context.go('/admin/notifications'),
+          onTap: () => context.push('/admin/notifications'),
         ),
       ],
     );

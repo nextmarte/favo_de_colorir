@@ -23,12 +23,13 @@ final pendingProfilesProvider = FutureProvider<List<Profile>>((ref) {
 class ProfileService {
   SupabaseClient get _client => SupabaseConfig.client;
 
-  Future<Profile> getProfile(String userId) async {
+  Future<Profile?> getProfile(String userId) async {
     final data = await _client
         .from('profiles')
         .select()
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+    if (data == null) return null;
     return Profile.fromJson(data);
   }
 
