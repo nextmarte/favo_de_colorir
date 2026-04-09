@@ -706,6 +706,72 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 
 ---
 
+---
+
+## TL;DR — Estado do Projeto (9 de Abril de 2026)
+
+App **Favo de Colorir** para ateliê de cerâmica da Débora (Tijuca, RJ).
+Construído em ~1 dia (8-9 Abril 2026) usando Flutter + Supabase.
+
+### Números
+- **40 commits**, **51 arquivos Dart**, **~10.000 linhas de código**
+- **107 testes** (13 arquivos), **10 migrations**, **7 edge functions**
+- **APK Android**: 55MB (release), **Web build**: OK
+- **CI/CD**: GitHub Actions (analyze + test + web build + APK)
+
+### O que funciona (end-to-end)
+- Login/cadastro com aprovação admin + aceite de políticas
+- Agenda semanal com confirmação presença (Vou/Não Vou)
+- Reposição de aulas (selecionar falta → agendar makeup)
+- Registro de materiais (argila kg + peças) com **offline sync** (SQLite)
+- Cobrança automática (totalizar mensalidade + argila + queimas)
+- Feed pessoal com upload de fotos (galeria/câmera)
+- Comunidade (posts + curtidas + comentários + foto)
+- Chat professora ↔ aluna
+- Estoque de argilas (níveis + alertas + compras)
+- Moderação automática de posts (keyword matching)
+- Admin completo: gestão usuários, turmas, alunas, preços, políticas, notificações, billing
+- Design System "Artisanal Modernism" (Epilogue + Manrope, tonal surfaces)
+- Bottom navigation com 5 tabs + rotas admin fullscreen
+- Push: `context.push()` para admin (preserva bottom nav)
+
+### Contas de teste
+- **Admin**: debora@favodecolorir.com.br / FavoAdmin2026!
+- **Alunas**: ana@teste.com, maria@teste.com, julia@teste.com (Teste123!)
+- **Supabase**: projeto `fhqklezevuqtqenbhsja` (sa-east-1)
+
+---
+
+## Próximos Passos
+
+### Para a Débora testar (imediato)
+1. Acessar via web (flutter run -d web-server) ou instalar APK
+2. Logar como admin, criar turmas, gerar aulas, criar alunas
+3. Logar como aluna, confirmar presença, ver agenda, criar notas no feed
+4. Logar como admin, registrar materiais, totalizar cobranças
+
+### Dívidas técnicas (próximas sessões)
+1. **Firebase Cloud Messaging** — push notifications reais
+   - Criar projeto em console.firebase.google.com
+   - `flutterfire configure` + registrar tokens
+   - Edge function envia push via FCM API
+
+2. **Mercado Pago Pix** — pagamento real
+   - Criar conta sandbox em mercadopago.com.br/developers
+   - Edge function gera QR code Pix
+   - Webhook recebe confirmação → atualiza cobrança
+
+3. **Moderação IA real** — Claude/OpenAI
+   - Trocar keyword matching por API de moderação
+   - Precisa de API key
+
+4. **Landing page** — Astro + Vercel
+   - Apresentação do ateliê, fotos, planos, contato
+
+5. **Build iOS** — precisa de Mac com Xcode
+
+---
+
 **Última atualização:** 9 de Abril de 2026  
 **Versão PRD:** 1.2  
-**Status:** App funcional (Web + Android APK). 50+ arquivos Dart, 107 testes, 9 migrations, 7 edge functions. 35+ commits.
+**Status:** App funcional (Web + Android APK). 51 arquivos Dart, 107 testes, 10 migrations, 7 edge functions. 40 commits.
