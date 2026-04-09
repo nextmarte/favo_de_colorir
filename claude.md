@@ -569,7 +569,7 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 
 ### Padrão de Services + Providers
 - Cada módulo tem um `Service` (acesso Supabase) + `Provider` (Riverpod)
-- Services: `auth_service.dart`, `profile_service.dart`, `policy_service.dart`, `agenda_service.dart`, `reposition_service.dart`, `material_service.dart`, `feed_service.dart`, `billing_service.dart`
+- Services: `auth_service.dart`, `profile_service.dart`, `policy_service.dart`, `agenda_service.dart`, `reposition_service.dart`, `material_service.dart`, `feed_service.dart`, `billing_service.dart`, `community_service.dart`, `stock_service.dart`
 - Providers ficam no próprio arquivo do service (não em arquivo separado)
 - Telas usam `ConsumerWidget` ou `ConsumerStatefulWidget` para acessar providers
 
@@ -593,6 +593,25 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 - Cria cobranças e itens automaticamente por aluna
 - Fluxo: draft → admin confirma → notifica → aluna paga
 
+### M6 Comunidade
+- Tabelas: community_posts, community_comments, community_likes, chat_messages
+- RLS: users read all, authors manage own, admin/teacher can delete
+- Feed social com curtidas e comentários
+- Chat 1:1 professora ↔ aluna (sender/receiver only)
+
+### M7 Estoque
+- Tabelas: estoque_argila (qty + nível mínimo), estoque_compras
+- Trigger `handle_clay_usage`: baixa automática ao registrar argila
+- Trigger `handle_clay_purchase`: soma ao registrar compra (upsert)
+- Alerta visual quando estoque abaixo do nível mínimo
+
+### Edge Functions (5 deployed)
+- `enviar-notificacao`: confirmação 24h, lembrete 6h, aprovação
+- `totalizar-cobranca`: calcula mensalidade + argila + queimas
+- `exportar-cobranca`: CSV de cobranças do mês
+- `gerar-aulas`: gera aulas recorrentes N semanas a partir das turmas
+- `criar-aluna`: admin cria conta ativa com senha temporária
+
 ### Deploy
 - Supabase cloud: projeto `fhqklezevuqtqenbhsja` (sa-east-1)
 - Migrations via `supabase db push`
@@ -603,6 +622,6 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 
 ---
 
-**Última atualização:** 8 de Abril de 2026  
+**Última atualização:** 9 de Abril de 2026  
 **Versão PRD:** 1.2  
-**Status:** Sprints 0-6 concluídos, MVP funcional
+**Status:** Fases 1-3 concluídas (M1-M7 + Admin Config). 45 arquivos Dart, 40 testes, 7 migrations, 5 edge functions.
