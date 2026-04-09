@@ -660,29 +660,52 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 
 ---
 
-## Pendências (prioridade Web + Android)
+## Implementado (além do MVP)
 
-### Alta Prioridade
-- [ ] Build Android APK + testar em device
-- [ ] Registro de materiais offline (SQLite + sync)
-- [ ] Push notifications reais (Firebase Cloud Messaging)
-- [ ] Integração Mercado Pago (Pix QR code)
-- [ ] Admin: editar políticas + forçar re-aceite
-- [ ] Admin: notificações gerais (recados para todas)
-- [ ] CI/CD (flutter-ci.yml funcional)
+- [x] Build Android APK (55MB, release)
+- [x] Registro de materiais offline (SQLite + sync automático)
+- [x] Upload de fotos (Feed, Perfil avatar, Comunidade posts)
+- [x] Admin: editar políticas + forçar re-aceite
+- [x] Admin: notificações gerais (edge function enviar-recado)
+- [x] Admin: gestão de alunas em turmas (TurmaDetailScreen)
+- [x] Admin: criar aluna pelo app (edge function criar-aluna)
+- [x] Moderação de posts (edge function moderar-post, keyword matching)
+- [x] CI/CD (flutter-ci.yml com build web + Android)
+- [x] Ícones customizados Android + iOS
+- [x] Design System "Artisanal Modernism" completo
+- [x] Boilerplate removido, tudo em pt-BR
+- [x] 107 testes, 7 edge functions, 9 migrations
 
-### Média Prioridade
-- [ ] Integração Nuvemshop (cartão)
-- [ ] Moderação IA de posts (edge function moderar-post)
+## Bugs Corrigidos (sessão de fixes)
+- Navegação admin: go→push (menu sumia)
+- ProfileService.getProfile: single→maybeSingle (crashava)
+- Reposição: seleção da aula original (ambos IDs eram iguais)
+- Community N+1 queries → batch (3 queries ao invés de N*2)
+- Dashboard do dia: provider dentro do build + admin vê todas turmas
+- Rota turma/materiais: path params → extra (UTF-8 encoding error)
+- Botões vazios: notification bell, settings, help center
+- RLS notifications: edge function enviar-recado (bypass RLS)
+- totalizar-cobranca: total_amount é generated column
+
+## Pendências (dívida técnica)
+
+### Alta
+- [ ] Push notifications reais (Firebase Cloud Messaging) — requer projeto Firebase
+- [ ] Integração Mercado Pago (Pix QR code real + webhook)
+
+### Média
+- [ ] Integração Nuvemshop (cartão, parcelamento)
+- [ ] Moderação IA real (Claude/OpenAI API ao invés de keyword)
 - [ ] Landing page (Astro + Vercel)
 - [ ] Analytics (DAU/MAU)
 
-### Baixa Prioridade
+### Baixa
 - [ ] Enquetes e desafios criativos
 - [ ] Blog/dicas das professoras
+- [ ] Build iOS (requer macOS + Xcode)
 
 ---
 
 **Última atualização:** 9 de Abril de 2026  
 **Versão PRD:** 1.2  
-**Status:** Fases 1-3 concluídas (M1-M7). 46 arquivos Dart, 66 testes, 7 migrations, 5 edge functions. 26 commits.
+**Status:** App funcional (Web + Android APK). 50+ arquivos Dart, 107 testes, 9 migrations, 7 edge functions. 35+ commits.
