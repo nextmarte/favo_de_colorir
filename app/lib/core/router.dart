@@ -7,6 +7,7 @@ import '../modules/auth/signup_screen.dart';
 import '../modules/auth/policy_acceptance_screen.dart';
 import '../modules/auth/pending_approval_screen.dart';
 import '../modules/auth/admin_approval_screen.dart';
+import '../modules/auth/admin_create_user_screen.dart';
 import '../modules/auth/admin_users_screen.dart';
 import '../modules/auth/profile_screen.dart';
 import '../modules/agenda/home_screen.dart';
@@ -139,6 +140,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/users',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/create-user',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AdminCreateUserScreen(),
       ),
       GoRoute(
         path: '/admin/approvals',

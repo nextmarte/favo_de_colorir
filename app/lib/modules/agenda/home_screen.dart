@@ -167,12 +167,12 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildAdminGrid(BuildContext context) {
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: 3,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 2.2,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.4,
       children: [
         _AdminCard(
           icon: Icons.manage_accounts,
@@ -193,6 +193,11 @@ class HomeScreen extends ConsumerWidget {
           icon: Icons.attach_money,
           label: 'Financeiro',
           onTap: () => context.go('/admin/billing'),
+        ),
+        _AdminCard(
+          icon: Icons.person_add,
+          label: 'Criar Aluna',
+          onTap: () => context.go('/admin/create-user'),
         ),
       ],
     );
@@ -372,19 +377,19 @@ class _AdminCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: FavoColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 22, color: FavoColors.primary),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(label,
-                  style: Theme.of(context).textTheme.labelLarge),
-            ),
+            Icon(icon, size: 24, color: FavoColors.primary),
+            const SizedBox(height: 6),
+            Text(label,
+                style: Theme.of(context).textTheme.labelSmall,
+                textAlign: TextAlign.center),
           ],
         ),
       ),

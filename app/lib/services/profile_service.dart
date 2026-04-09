@@ -82,6 +82,31 @@ class ProfileService {
     await updateProfile(userId, {'status': 'blocked'});
   }
 
+  /// Admin cria aluna via edge function
+  Future<Map<String, dynamic>> createUser({
+    required String email,
+    required String fullName,
+    String? phone,
+    String? password,
+    String role = 'student',
+    List<String> turmaIds = const [],
+  }) async {
+    final response = await _client.functions.invoke(
+      'criar-aluna',
+      body: {
+        'email': email,
+        'full_name': fullName,
+        // ignore: use_null_aware_elements
+        if (phone != null) 'phone': phone,
+        // ignore: use_null_aware_elements
+        if (password != null) 'password': password,
+        'role': role,
+        'turma_ids': turmaIds,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<void> deleteAccount(String userId) async {
     await _client.rpc('delete_user_account', params: {
       'p_user_id': userId,
