@@ -612,16 +612,77 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 - `gerar-aulas`: gera aulas recorrentes N semanas a partir das turmas
 - `criar-aluna`: admin cria conta ativa com senha temporária
 
+### Design System — "Artisanal Modernism"
+- Fontes: Epilogue (display/headlines) + Manrope (body/labels) via `google_fonts`
+- Paleta: surface hierarchy (#FFF8F4 → #EAE1D9), primary #8D4B00, secondary #C75B39
+- No-line philosophy: sem borders, profundidade via tonal shifts
+- Cards rounded 20-24px, buttons rounded-full 48px, inputs sem border
+- Bottom navigation: NavigationBar com `StatefulShellRoute.indexedStack`
+- Rotas admin em fullscreen (fora do shell), tabs preservam estado
+
+### Admin Features
+- Gestão de usuários: listar, filtrar por role/status, mudar role/status inline
+- Criar aluna: edge function `criar-aluna` gera conta ativa com senha temporária
+- Gerar aulas: edge function `gerar-aulas` cria aulas recorrentes N semanas
+- Config preços: editar preço argila/kg e queima esmalte/peça
+- Aprovação de cadastros: aprovar/rejeitar com 1 clique
+- Painel financeiro: totalizar, filtrar, confirmar, notificar, export CSV
+
+### Bugs Corrigidos
+- RLS recursão infinita em profiles → função `auth_role()` SECURITY DEFINER
+- `authStateProvider` stream bloqueava providers no web → removido, lê direto do session
+- `total_amount` é generated column → removido do INSERT na edge function
+- `flutter_dotenv` não aceita aspas no `.env`
+- `.env` precisa estar em `pubspec.yaml` assets para web
+
+### Dados de Teste (Supabase Cloud)
+- Admin: debora@favodecolorir.com.br / FavoAdmin2026!
+- Alunas: ana@teste.com, maria@teste.com, julia@teste.com (senha: Teste123!)
+- 5 turmas (Ter-Sáb), 18+ aulas geradas, 3 assinaturas mensal
+- 3 cobranças totalizadas (R$350-376), 1 post comunidade, 1 chat message
+
 ### Deploy
 - Supabase cloud: projeto `fhqklezevuqtqenbhsja` (sa-east-1)
+- 7 migrations aplicadas, 5 edge functions deployed
 - Migrations via `supabase db push`
-- Seed data via REST API (service_role_key)
+- Edge functions via `supabase functions deploy <nome>`
 - `.env` sem aspas (flutter_dotenv não aceita)
 - `.env` listado em `pubspec.yaml` assets (necessário para web)
-- Web: `flutter run -d web-server --web-port=5555`
+- Web dev: `flutter run -d web-server --web-port=5555`
+- Web build: `flutter build web`
+- Android build: `flutter build appbundle --release`
+
+### Testes
+- 66 testes unitários (6 arquivos): models, error handler, community, stock, reposition
+- 22 endpoints REST testados via curl (com RLS validation)
+- 5 edge functions testadas end-to-end
+- `flutter analyze` = 0 issues
+
+---
+
+## Pendências (prioridade Web + Android)
+
+### Alta Prioridade
+- [ ] Build Android APK + testar em device
+- [ ] Registro de materiais offline (SQLite + sync)
+- [ ] Push notifications reais (Firebase Cloud Messaging)
+- [ ] Integração Mercado Pago (Pix QR code)
+- [ ] Admin: editar políticas + forçar re-aceite
+- [ ] Admin: notificações gerais (recados para todas)
+- [ ] CI/CD (flutter-ci.yml funcional)
+
+### Média Prioridade
+- [ ] Integração Nuvemshop (cartão)
+- [ ] Moderação IA de posts (edge function moderar-post)
+- [ ] Landing page (Astro + Vercel)
+- [ ] Analytics (DAU/MAU)
+
+### Baixa Prioridade
+- [ ] Enquetes e desafios criativos
+- [ ] Blog/dicas das professoras
 
 ---
 
 **Última atualização:** 9 de Abril de 2026  
 **Versão PRD:** 1.2  
-**Status:** Fases 1-3 concluídas (M1-M7 + Admin Config). 45 arquivos Dart, 40 testes, 7 migrations, 5 edge functions.
+**Status:** Fases 1-3 concluídas (M1-M7). 46 arquivos Dart, 66 testes, 7 migrations, 5 edge functions. 26 commits.
