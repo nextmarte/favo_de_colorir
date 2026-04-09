@@ -7,21 +7,33 @@ import '../../core/theme.dart';
 import '../../models/presenca.dart';
 import '../../models/turma.dart';
 import '../../services/agenda_service.dart';
+import '../../services/profile_service.dart';
+
+/// Provider para turmas da professora/admin
+/// Admin vê TODAS as turmas, professora vê só as dela
+final dashboardTurmasProvider = FutureProvider<List<Turma>>((ref) async {
+  final userId = SupabaseConfig.auth.currentUser?.id;
+  if (userId == null) return [];
+
+  final profile = await ref.read(profileServiceProvider).getProfile(userId);
+  if (profile == null) return [];
+
+  if (profile.isAdmin) {
+    return ref.read(agendaServiceProvider).getAllTurmas();
+  }
+  return ref.read(agendaServiceProvider).getTeacherTurmas(userId);
+});
 
 class TeacherDashboardScreen extends ConsumerWidget {
   const TeacherDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final teacherId = SupabaseConfig.auth.currentUser!.id;
-    final turmasProvider = FutureProvider<List<Turma>>((ref) {
-      return ref.read(agendaServiceProvider).getTeacherTurmas(teacherId);
-    });
-    final turmas = ref.watch(turmasProvider);
+    final turmasAsync = ref.watch(dashboardTurmasProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard do Dia')),
-      body: turmas.when(
+      body: turmasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Erro: $error')),
         data: (turmaList) {
@@ -34,18 +46,21 @@ class TeacherDashboardScreen extends ConsumerWidget {
                       size: 48,
                       color: FavoColors.onSurfaceVariant.withAlpha(80)),
                   const SizedBox(height: 16),
-                  Text('Nenhuma turma atribuída',
+                  Text('Nenhuma turma encontrada',
                       style: Theme.of(context).textTheme.bodyLarge),
                 ],
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(24),
-            itemCount: turmaList.length,
-            itemBuilder: (context, index) =>
-                _TurmaDayCard(turma: turmaList[index]),
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(dashboardTurmasProvider.future),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(24),
+              itemCount: turmaList.length,
+              itemBuilder: (context, index) =>
+                  _TurmaDayCard(turma: turmaList[index]),
+            ),
           );
         },
       ),
@@ -104,8 +119,8 @@ class _TurmaDayCard extends ConsumerWidget {
 
           aulasAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, _) =>
-                const Text('Erro ao carregar', style: TextStyle(color: FavoColors.error)),
+            error: (_, _) => const Text('Erro ao carregar',
+                style: TextStyle(color: FavoColors.error)),
             data: (aulasWithPresencas) {
               if (aulasWithPresencas.isEmpty) {
                 return Text('Sem aula hoje',
@@ -126,14 +141,17 @@ class _TurmaDayCard extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Counters
                   Row(
                     children: [
                       _Counter(
-                          icon: Icons.check, count: confirmed, color: FavoColors.success),
+                          icon: Icons.check,
+                          count: confirmed,
+                          color: FavoColors.success),
                       const SizedBox(width: 12),
                       _Counter(
-                          icon: Icons.close, count: declined, color: FavoColors.error),
+                          icon: Icons.close,
+                          count: declined,
+                          color: FavoColors.error),
                       const SizedBox(width: 12),
                       _Counter(
                           icon: Icons.hourglass_empty,
@@ -151,7 +169,6 @@ class _TurmaDayCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Student list
                   ...aula.presencas.map((p) => Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Row(
@@ -171,9 +188,9 @@ class _TurmaDayCard extends ConsumerWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(p.studentName,
-                                  style: Theme.of(context).textTheme.bodyMedium),
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium),
                             ),
-                            // Botão registrar materiais
                             IconButton(
                               icon: const Icon(Icons.edit_note, size: 20),
                               color: FavoColors.primary,
