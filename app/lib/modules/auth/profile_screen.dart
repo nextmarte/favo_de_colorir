@@ -113,19 +113,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 28),
 
         // Notification settings
-        Text('Notification Settings',
+        Text('Configurações de Notificação',
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
 
         _SettingToggle(
           icon: Icons.calendar_today_outlined,
-          label: 'Class confirmations',
+          label: 'Confirmações de aula',
           value: true,
           onChanged: (_) {},
         ),
         _SettingToggle(
           icon: Icons.receipt_long_outlined,
-          label: 'Payments & Invoices',
+          label: 'Pagamentos e cobranças',
           value: true,
           onChanged: (_) {},
         ),
@@ -147,7 +147,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               if (context.mounted) context.go('/login');
             },
             icon: const Icon(Icons.logout, size: 18),
-            label: const Text('Logout'),
+            label: const Text('Sair'),
             style: TextButton.styleFrom(
               foregroundColor: FavoColors.error,
             ),

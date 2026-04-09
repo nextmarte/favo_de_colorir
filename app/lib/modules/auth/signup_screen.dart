@@ -83,7 +83,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 const SizedBox(height: 32),
 
                 // Full Name
-                Text('FULL NAME',
+                Text('NOME COMPLETO',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.5,
                         )),
@@ -102,7 +102,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 const SizedBox(height: 20),
 
                 // Email
-                Text('EMAIL',
+                Text('E-MAIL',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.5,
                         )),
@@ -120,7 +120,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 const SizedBox(height: 20),
 
                 // Phone
-                Text('PHONE',
+                Text('TELEFONE',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.5,
                         )),
@@ -134,7 +134,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 const SizedBox(height: 20),
 
                 // Birth date
-                Text('BIRTH DATE',
+                Text('DATA DE NASCIMENTO',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.5,
                         )),

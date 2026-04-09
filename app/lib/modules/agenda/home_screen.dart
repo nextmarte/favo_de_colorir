@@ -40,7 +40,7 @@ class HomeScreen extends ConsumerWidget {
                         color: FavoColors.onPrimary, size: 18),
                   ),
                   const SizedBox(width: 10),
-                  Text('Artisanal Studio',
+                  Text('Favo de Colorir',
                       style: Theme.of(context).textTheme.titleSmall),
                   const Spacer(),
                   IconButton(

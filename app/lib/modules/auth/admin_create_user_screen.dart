@@ -70,7 +70,7 @@ class _AdminCreateUserScreenState
               const SizedBox(height: 20),
 
               // Email
-              Text('EMAIL',
+              Text('E-MAIL',
                   style: Theme.of(context)
                       .textTheme
                       .labelSmall

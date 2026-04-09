@@ -1,11 +1,11 @@
 {
-    "name": "favo",
-    "short_name": "favo",
+    "name": "Favo de Colorir",
+    "short_name": "Favo",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFF8F4",
+    "theme_color": "#8D4B00",
+    "description": "Ateliê de Cerâmica — Gestão de agenda, materiais, cobrança e comunidade.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

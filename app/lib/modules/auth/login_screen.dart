@@ -165,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Entrar no Atelier'),
+                          : const Text('Entrar no Ateliê'),
                     ),
                   ),
                   const SizedBox(height: 32),
