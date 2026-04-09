@@ -4,7 +4,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface TotalizarPayload {
-  month_year: string; // "2026-04"
+  month_year: string;
 }
 
 Deno.serve(async (req) => {
@@ -13,26 +13,14 @@ Deno.serve(async (req) => {
     const { month_year } = payload;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar consumo de argila do mês (via view)
-    const { data: clayData } = await supabase
-      .from("v_consumo_mensal_aluna")
-      .select("*")
-      .eq("month_year", month_year);
-
-    // Buscar queimas do mês (via view)
-    const { data: firingData } = await supabase
-      .from("v_queimas_mensal_aluna")
-      .select("*")
-      .eq("month_year", month_year);
-
-    // Buscar assinaturas ativas
+    // Buscar assinaturas ativas com preço do plano
     const { data: subscriptions } = await supabase
       .from("assinaturas")
-      .select("*, planos(*)")
+      .select("student_id, planos(price)")
       .eq("status", "active");
 
-    if (!subscriptions) {
-      return new Response(JSON.stringify({ created: 0 }));
+    if (!subscriptions || subscriptions.length === 0) {
+      return new Response(JSON.stringify({ created: 0, message: "No active subscriptions" }));
     }
 
     let created = 0;
@@ -41,17 +29,35 @@ Deno.serve(async (req) => {
       const studentId = sub.student_id;
       const planAmount = (sub as any).planos?.price ?? 0;
 
-      // Argila
-      const studentClay = clayData?.find(
-        (c: any) => c.student_id === studentId,
-      );
-      const clayAmount = studentClay?.total_cost ?? 0;
+      // Argila: somar todas as linhas do aluno no mês (pode ter múltiplos tipos)
+      const { data: clayData } = await supabase
+        .from("v_consumo_mensal_aluna")
+        .select("total_clay_cost")
+        .eq("student_id", studentId)
+        .eq("month_year", month_year);
 
-      // Queimas
-      const studentFiring = firingData?.find(
-        (f: any) => f.student_id === studentId,
-      );
-      const firingAmount = studentFiring?.total_cost ?? 0;
+      let clayAmount = 0;
+      if (clayData) {
+        clayAmount = clayData.reduce(
+          (sum: number, row: any) => sum + (Number(row.total_clay_cost) || 0),
+          0,
+        );
+      }
+
+      // Queimas: somar todas as linhas do aluno no mês
+      const { data: firingData } = await supabase
+        .from("v_queimas_mensal_aluna")
+        .select("total_firing_cost")
+        .eq("student_id", studentId)
+        .eq("month_year", month_year);
+
+      let firingAmount = 0;
+      if (firingData) {
+        firingAmount = firingData.reduce(
+          (sum: number, row: any) => sum + (Number(row.total_firing_cost) || 0),
+          0,
+        );
+      }
 
       const totalAmount = planAmount + clayAmount + firingAmount;
 
@@ -65,7 +71,7 @@ Deno.serve(async (req) => {
 
       if (existing) continue;
 
-      // Criar cobrança
+      // Criar cobrança (total_amount é generated column, não inserir)
       const { data: cobranca } = await supabase
         .from("cobrancas")
         .insert({
@@ -74,7 +80,6 @@ Deno.serve(async (req) => {
           plan_amount: planAmount,
           clay_amount: clayAmount,
           firing_amount: firingAmount,
-          total_amount: totalAmount,
           status: "draft",
           admin_confirmed: false,
         })
@@ -90,7 +95,7 @@ Deno.serve(async (req) => {
         items.push({
           cobranca_id: cobranca.id,
           type: "plan",
-          description: `Mensalidade - ${(sub as any).planos?.name ?? "Plano"}`,
+          description: "Mensalidade",
           total: planAmount,
         });
       }
@@ -100,8 +105,6 @@ Deno.serve(async (req) => {
           cobranca_id: cobranca.id,
           type: "clay",
           description: "Argila consumida no mês",
-          quantity: studentClay?.total_kg,
-          unit_price: studentClay?.avg_price_per_kg,
           total: clayAmount,
         });
       }
@@ -111,7 +114,6 @@ Deno.serve(async (req) => {
           cobranca_id: cobranca.id,
           type: "firing",
           description: "Queimas de esmalte no mês",
-          quantity: studentFiring?.total_pieces,
           total: firingAmount,
         });
       }
