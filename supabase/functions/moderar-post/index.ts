@@ -1,77 +1,27 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { makeOpenAICaller, moderateContent } from "./moderator.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// Palavras bloqueadas por categoria
-const BLOCKED_POLITICAL = [
-  "político", "política", "eleição", "candidato", "partido",
-  "bolsonaro", "lula", "governo", "presidente", "congresso",
-  "senado", "deputado", "vereador", "prefeito", "governador",
-  "esquerda", "direita", "comunista", "fascista",
-];
-
-const BLOCKED_OFFENSIVE = [
-  "porra", "caralho", "merda", "foda", "puta", "viado",
-  "idiota", "imbecil", "retardado", "vagabunda",
-];
+const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
 
 interface ModeratePayload {
   post_id: string;
   content: string;
 }
 
-interface ModerationResult {
-  flagged: boolean;
-  reason: string | null;
-  category: string | null;
-  blocked_word: string | null;
-}
-
-function moderateContent(content: string): ModerationResult {
-  const lower = content.toLowerCase();
-
-  // Check political
-  for (const word of BLOCKED_POLITICAL) {
-    if (lower.includes(word)) {
-      return {
-        flagged: true,
-        reason: "Conteúdo político detectado",
-        category: "political",
-        blocked_word: word,
-      };
-    }
-  }
-
-  // Check offensive
-  for (const word of BLOCKED_OFFENSIVE) {
-    if (lower.includes(word)) {
-      return {
-        flagged: true,
-        reason: "Linguagem inadequada detectada",
-        category: "offensive",
-        blocked_word: word,
-      };
-    }
-  }
-
-  return {
-    flagged: false,
-    reason: null,
-    category: null,
-    blocked_word: null,
-  };
-}
+const callOpenAI = openaiKey
+  ? makeOpenAICaller(openaiKey)
+  : () => Promise.reject(new Error("OPENAI_API_KEY not configured"));
 
 Deno.serve(async (req) => {
   try {
     const payload: ModeratePayload = await req.json();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const result = moderateContent(payload.content);
+    const result = await moderateContent(payload.content, callOpenAI);
 
     if (result.flagged) {
-      // Flag the post
       await supabase
         .from("community_posts")
         .update({
@@ -80,17 +30,20 @@ Deno.serve(async (req) => {
         })
         .eq("id", payload.post_id);
 
-      // Notify admin
       const { data: admins } = await supabase
         .from("profiles")
         .select("id")
         .eq("role", "admin");
 
       if (admins) {
-        const notifications = admins.map((a: any) => ({
+        const bodyParts = [`Post flagado por: ${result.reason}.`];
+        if (result.blocked_word) {
+          bodyParts.push(`Palavra: "${result.blocked_word}"`);
+        }
+        const notifications = admins.map((a: { id: string }) => ({
           user_id: a.id,
           title: "Post flagado",
-          body: `Post flagado por: ${result.reason}. Palavra: "${result.blocked_word}"`,
+          body: bodyParts.join(" "),
           type: "moderation",
           data: { post_id: payload.post_id, category: result.category },
         }));
@@ -101,7 +54,8 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify(result));
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
     });
   }
