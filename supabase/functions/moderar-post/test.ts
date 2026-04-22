@@ -15,6 +15,8 @@ const cleanOpenAI: OpenAIModerationResult = {
     "self-harm": false,
     "self-harm/intent": false,
     "self-harm/instructions": false,
+    illicit: false,
+    "illicit/violent": false,
   },
   category_scores: {
     sexual: 0.001,
@@ -28,6 +30,8 @@ const cleanOpenAI: OpenAIModerationResult = {
     "self-harm": 0.0,
     "self-harm/intent": 0.0,
     "self-harm/instructions": 0.0,
+    illicit: 0.001,
+    "illicit/violent": 0.0,
   },
 };
 
@@ -125,6 +129,16 @@ Deno.test("OpenAI flag self-harm → category self-harm + reason pt-BR", async (
   assertEquals(result.flagged, true);
   assertEquals(result.category, "self-harm");
   assertEquals(result.reason, "Automutilação");
+});
+
+Deno.test("OpenAI flag illicit → category illicit + reason pt-BR", async () => {
+  const result = await moderateContent(
+    "qualquer conteúdo",
+    () => Promise.resolve(flaggedWith("illicit")),
+  );
+  assertEquals(result.flagged, true);
+  assertEquals(result.category, "illicit");
+  assertEquals(result.reason, "Atividade ilícita");
 });
 
 Deno.test("OpenAI flag múltiplas categorias → usa a de maior score", async () => {

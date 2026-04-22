@@ -16,7 +16,9 @@ export type OpenAICategory =
   | "violence/graphic"
   | "self-harm"
   | "self-harm/intent"
-  | "self-harm/instructions";
+  | "self-harm/instructions"
+  | "illicit"
+  | "illicit/violent";
 
 export interface OpenAIModerationResult {
   flagged: boolean;
@@ -45,6 +47,8 @@ const CATEGORY_LABEL_PT: Record<string, string> = {
   "self-harm": "Automutilação",
   "self-harm/intent": "Automutilação",
   "self-harm/instructions": "Automutilação",
+  illicit: "Atividade ilícita",
+  "illicit/violent": "Atividade ilícita",
 };
 
 const CATEGORY_ROOT: Record<string, string> = {
@@ -59,6 +63,8 @@ const CATEGORY_ROOT: Record<string, string> = {
   "self-harm": "self-harm",
   "self-harm/intent": "self-harm",
   "self-harm/instructions": "self-harm",
+  illicit: "illicit",
+  "illicit/violent": "illicit",
 };
 
 function checkPolitical(content: string): ModerationResult | null {
