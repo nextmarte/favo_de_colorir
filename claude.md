@@ -12,6 +12,8 @@
 
 Carregue a skill antes de gerar código de UI. A intenção é evitar estética genérica de "AI slop" e manter coerência com o Design System **Artisanal Modernism** (Epilogue + Manrope, tonal surfaces) já aplicado no app Flutter. Tipografia distintiva, paleta comprometida com acentos fortes, composição espacial com asymmetry/overlap, motion intencional via CSS. Proibido: fontes genéricas (Inter, Roboto, Arial, Space Grotesk), paletas "roxo em branco", layouts previsíveis.
 
+**Skill obrigatória para código Flutter/Dart:** sempre usar a skill `flutter-favo` (local, em `.claude/skills/flutter-favo/SKILL.md`) em qualquer trabalho que envolva código em `app/lib/` ou `app/test/`. Ela contém stack travada, arquitetura de pastas, regras de Riverpod/go_router/Supabase, padrões de teste (TDD obrigatório) e antipadrões do projeto. Para UI nova no app, combine com `frontend-design`.
+
 ---
 
 ## Visão Geral do Produto
