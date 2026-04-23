@@ -17,10 +17,6 @@ class AdminTurmasScreen extends ConsumerStatefulWidget {
 class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
   bool _isGenerating = false;
 
-  static const _weekDays = [
-    'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final turmasAsync = ref.watch(allTurmasProvider);
@@ -158,18 +154,30 @@ class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
     }
   }
 
-  Future<void> _showCreateDialog(BuildContext context) async {
-    final nameCtrl = TextEditingController();
-    int capacity = 8;
-    int? dayOfWeek;
-    TimeOfDay startTime = const TimeOfDay(hour: 9, minute: 0);
-    TimeOfDay endTime = const TimeOfDay(hour: 11, minute: 0);
+  Future<void> _showCreateDialog(BuildContext context, {Turma? existing}) =>
+      showTurmaFormDialog(context, ref, existing: existing);
+}
+
+Future<void> showTurmaFormDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  Turma? existing,
+}) async {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    int capacity = existing?.capacity ?? 8;
+    int? dayOfWeek = existing?.dayOfWeek;
+    TimeOfDay startTime = existing != null
+        ? _parseTimeOfDay(existing.startTime)
+        : const TimeOfDay(hour: 9, minute: 0);
+    TimeOfDay endTime = existing != null
+        ? _parseTimeOfDay(existing.endTime)
+        : const TimeOfDay(hour: 11, minute: 0);
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Nova Turma'),
+          title: Text(existing == null ? 'Nova Turma' : 'Editar Turma'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -180,10 +188,11 @@ class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<int>(
+                  initialValue: dayOfWeek,
                   decoration: const InputDecoration(labelText: 'Dia da semana'),
                   items: List.generate(7, (i) => DropdownMenuItem(
                     value: i,
-                    child: Text(_weekDays[i]),
+                    child: Text(_weekDaysLong[i]),
                   )),
                   onChanged: (v) => setState(() => dayOfWeek = v),
                 ),
@@ -240,7 +249,7 @@ class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Criar'),
+              child: Text(existing == null ? 'Criar' : 'Salvar'),
             ),
           ],
         ),
@@ -248,37 +257,207 @@ class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
     );
 
     if (result != true || nameCtrl.text.trim().isEmpty) return;
+    if (dayOfWeek == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecione o dia da semana')),
+        );
+      }
+      return;
+    }
+
+    final startStr =
+        '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
+    final endStr =
+        '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00';
+
+    if (startStr.compareTo(endStr) >= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Horário de término tem que ser depois do início')),
+        );
+      }
+      return;
+    }
+
+    // Detector de conflito
+    final conflict = await ref.read(agendaServiceProvider).checkScheduleConflict(
+          dayOfWeek: dayOfWeek!,
+          startTime: startStr,
+          endTime: endStr,
+          excludeTurmaId: existing?.id,
+        );
+    if (conflict != null && context.mounted) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Conflito de horário'),
+          content: Text(
+              'Já existe "${conflict.name}" nesse mesmo dia/horário. Criar mesmo assim?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: FavoColors.error),
+              child: const Text('Criar mesmo assim'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
 
     try {
-      final startStr =
-          '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
-      final endStr =
-          '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00';
-
-      await ref.read(agendaServiceProvider).createTurma({
-        'name': nameCtrl.text.trim(),
-        'modality': 'regular',
-        'day_of_week': dayOfWeek,
-        'start_time': startStr,
-        'end_time': endStr,
-        'capacity': capacity,
-      });
+      if (existing == null) {
+        await ref.read(agendaServiceProvider).createTurma({
+          'name': nameCtrl.text.trim(),
+          'modality': 'regular',
+          'day_of_week': dayOfWeek,
+          'start_time': startStr,
+          'end_time': endStr,
+          'capacity': capacity,
+        });
+      } else {
+        await ref.read(agendaServiceProvider).updateTurma(existing.id, {
+          'name': nameCtrl.text.trim(),
+          'day_of_week': dayOfWeek,
+          'start_time': startStr,
+          'end_time': endStr,
+          'capacity': capacity,
+        });
+      }
 
       ref.invalidate(allTurmasProvider);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Turma criada!')),
+          SnackBar(
+              content: Text(existing == null
+                  ? 'Turma criada!'
+                  : 'Turma atualizada!')),
         );
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
-      }
+      if (context.mounted) showErrorSnackBar(context, e);
     }
+}
+
+Future<void> _showSingleAulaDialog(
+    BuildContext context, WidgetRef ref, Turma turma) async {
+  DateTime? date;
+  TimeOfDay startTime = _parseTimeOfDay(turma.startTime);
+  TimeOfDay endTime = _parseTimeOfDay(turma.endTime);
+  final notesCtrl = TextEditingController();
+
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => AlertDialog(
+        title: Text('Aula pontual em ${turma.name}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                icon: const Icon(Icons.calendar_today),
+                label: Text(date == null
+                    ? 'Escolher data'
+                    : '${date!.day}/${date!.month}/${date!.year}'),
+                onPressed: () async {
+                  final d = await showDatePicker(
+                    context: ctx,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (d != null) setState(() => date = d);
+                },
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () async {
+                        final t = await showTimePicker(
+                            context: ctx, initialTime: startTime);
+                        if (t != null) setState(() => startTime = t);
+                      },
+                      child: Text('Início ${startTime.format(ctx)}'),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () async {
+                        final t = await showTimePicker(
+                            context: ctx, initialTime: endTime);
+                        if (t != null) setState(() => endTime = t);
+                      },
+                      child: Text('Fim ${endTime.format(ctx)}'),
+                    ),
+                  ),
+                ],
+              ),
+              TextField(
+                controller: notesCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Notas (opcional)'),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Agendar')),
+        ],
+      ),
+    ),
+  );
+
+  if (ok != true || date == null) return;
+
+  final startStr =
+      '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
+  final endStr =
+      '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00';
+
+  try {
+    await ref.read(agendaServiceProvider).createSingleAula(
+          turmaId: turma.id,
+          date: date!,
+          startTime: startStr,
+          endTime: endStr,
+          notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+        );
+    ref.invalidate(allTurmasProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aula agendada!')),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) showErrorSnackBar(context, e);
   }
+}
+
+const _weekDaysLong = [
+  'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado',
+];
+
+TimeOfDay _parseTimeOfDay(String s) {
+  final parts = s.split(':');
+  return TimeOfDay(
+    hour: int.parse(parts[0]),
+    minute: int.parse(parts[1]),
+  );
 }
 
 class _TurmaCard extends ConsumerWidget {
@@ -348,6 +527,16 @@ class _TurmaCard extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ListTile(
+                      leading: const Icon(Icons.edit_outlined),
+                      title: const Text('Editar turma'),
+                      onTap: () => Navigator.pop(ctx, 'edit'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.event_available_outlined),
+                      title: const Text('Agendar aula pontual'),
+                      onTap: () => Navigator.pop(ctx, 'single_aula'),
+                    ),
+                    ListTile(
                       leading: const Icon(Icons.visibility_off),
                       title: const Text('Desativar turma'),
                       onTap: () => Navigator.pop(ctx, 'deactivate'),
@@ -355,6 +544,14 @@ class _TurmaCard extends ConsumerWidget {
                   ],
                 ),
               );
+              if (action == 'edit' && context.mounted) {
+                await showTurmaFormDialog(context, ref, existing: turma);
+                return;
+              }
+              if (action == 'single_aula' && context.mounted) {
+                await _showSingleAulaDialog(context, ref, turma);
+                return;
+              }
               if (action == 'deactivate' && context.mounted) {
                 final ok = await showDialog<bool>(
                   context: context,

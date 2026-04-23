@@ -211,6 +211,91 @@ class AgendaService {
     return Aula.fromJson(data);
   }
 
+  /// Detecta conflito de horário com turmas existentes.
+  /// [excludeTurmaId] ignora uma turma específica (usado ao editar).
+  ///
+  /// Retorna a Turma que conflita, se houver.
+  Future<Turma?> checkScheduleConflict({
+    required int dayOfWeek,
+    required String startTime, // 'HH:MM:SS'
+    required String endTime,
+    String? excludeTurmaId,
+  }) async {
+    final data = await _client
+        .from('turmas')
+        .select()
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_active', true);
+
+    for (final row in data) {
+      if (excludeTurmaId != null && row['id'] == excludeTurmaId) continue;
+      final existingStart = row['start_time'] as String;
+      final existingEnd = row['end_time'] as String;
+      // overlap: start < existingEnd AND end > existingStart
+      if (startTime.compareTo(existingEnd) < 0 &&
+          endTime.compareTo(existingStart) > 0) {
+        return Turma.fromJson(row);
+      }
+    }
+    return null;
+  }
+
+  /// Cria aula pontual (não recorrente) em turma existente.
+  /// Gera presencas pra alunas ativas da turma.
+  Future<Aula> createSingleAula({
+    required String turmaId,
+    required DateTime date,
+    required String startTime,
+    required String endTime,
+    String? notes,
+  }) async {
+    final dateStr = date.toIso8601String().split('T').first;
+
+    final aula = await createAula({
+      'turma_id': turmaId,
+      'scheduled_date': dateStr,
+      'start_time': startTime,
+      'end_time': endTime,
+      'status': 'scheduled',
+      'notes': notes,
+    });
+
+    final enrollments = await _client
+        .from('turma_alunos')
+        .select('student_id')
+        .eq('turma_id', turmaId)
+        .eq('status', 'active');
+
+    if (enrollments.isNotEmpty) {
+      final presencas = enrollments
+          .map((e) => {
+                'aula_id': aula.id,
+                'student_id': e['student_id'],
+                'confirmation': 'pending',
+              })
+          .toList();
+      await _client.from('presencas').insert(presencas);
+    }
+
+    try {
+      final actorId = SupabaseConfig.auth.currentUser?.id;
+      await _client.from('audit_logs').insert({
+        'actor_id': actorId,
+        'action': 'create_aula_avulsa',
+        'resource_type': 'aula',
+        'resource_id': aula.id,
+        'changes': {
+          'turma_id': turmaId,
+          'scheduled_date': dateStr,
+          'start_time': startTime,
+          'end_time': endTime,
+        },
+      });
+    } catch (_) {}
+
+    return aula;
+  }
+
   /// Aulas do dia para uma turma (dashboard professora)
   Future<List<AulaWithPresencas>> getAulasDoDia(String turmaId) async {
     final today = DateTime.now().toIso8601String().split('T').first;
