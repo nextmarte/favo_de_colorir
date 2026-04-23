@@ -6,6 +6,11 @@ const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface RecadoPayload {
   title: string;
   body: string;
+  // Segmentação (opcional). Sem nada = todos ativos.
+  target?: "all" | "turma" | "role" | "users";
+  turma_id?: string;
+  role?: "admin" | "teacher" | "assistant" | "student";
+  user_ids?: string[];
 }
 
 Deno.serve(async (req) => {
@@ -13,19 +18,40 @@ Deno.serve(async (req) => {
     const payload: RecadoPayload = await req.json();
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar todos os profiles ativos
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("status", "active");
+    const target = payload.target ?? "all";
+    let recipientIds: string[] = [];
 
-    if (!profiles || profiles.length === 0) {
+    if (target === "users" && payload.user_ids && payload.user_ids.length > 0) {
+      recipientIds = payload.user_ids;
+    } else if (target === "turma" && payload.turma_id) {
+      const { data } = await supabase
+        .from("turma_alunos")
+        .select("student_id")
+        .eq("turma_id", payload.turma_id)
+        .eq("status", "active");
+      recipientIds = (data ?? []).map((r: any) => r.student_id);
+    } else if (target === "role" && payload.role) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", payload.role)
+        .eq("status", "active");
+      recipientIds = (data ?? []).map((r: any) => r.id);
+    } else {
+      // Fallback "all" ativos
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("status", "active");
+      recipientIds = (data ?? []).map((r: any) => r.id);
+    }
+
+    if (recipientIds.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }));
     }
 
-    // Criar notificação para cada um
-    const notifications = profiles.map((p: any) => ({
-      user_id: p.id,
+    const notifications = recipientIds.map((id) => ({
+      user_id: id,
       title: payload.title,
       body: payload.body,
       type: "general",
@@ -35,9 +61,9 @@ Deno.serve(async (req) => {
     await supabase.from("notifications").insert(notifications);
 
     return new Response(
-      JSON.stringify({ sent: profiles.length }),
+      JSON.stringify({ sent: recipientIds.length }),
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
     });

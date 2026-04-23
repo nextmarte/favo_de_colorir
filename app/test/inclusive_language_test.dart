@@ -17,7 +17,10 @@ void main() {
       final src = File('lib/modules/admin/admin_notifications_screen.dart')
           .readAsStringSync();
       expect(src, isNot(contains('todas as alunas ativas')));
-      expect(src, contains('toda a turma ativa'));
+      expect(src, isNot(contains('toda a turma ativa')));
+      // Agora usa segmentação explícita (Todos / Turma / Papel), sem
+      // assumir gênero da audiência.
+      expect(src, contains('Segmente pra quem vai receber'));
     });
 
     test('admin_policies_screen não trata "alunas" como genérico', () {

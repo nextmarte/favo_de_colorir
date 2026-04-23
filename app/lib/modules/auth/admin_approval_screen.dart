@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error_handler.dart';
 import '../../core/theme.dart';
 import '../../models/profile.dart';
 import '../../services/profile_service.dart';
@@ -140,16 +141,34 @@ class _PendingCard extends ConsumerWidget {
   }
 
   Future<void> _reject(BuildContext context, WidgetRef ref) async {
+    final reasonCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rejeitar cadastro?'),
-        content: Text('Rejeitar ${profile.fullName}?'),
+        title: Text('Rejeitar ${profile.fullName}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                'A pessoa receberá uma notificação. Use o motivo pra explicar (opcional).'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Ex: cadastro duplicado, dados inválidos...',
+              ),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
           TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: FavoColors.error),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: FavoColors.error),
             child: const Text('Rejeitar'),
           ),
         ],
@@ -157,12 +176,17 @@ class _PendingCard extends ConsumerWidget {
     );
     if (confirmed != true) return;
     try {
-      await ref.read(profileServiceProvider).rejectProfile(profile.id);
+      await ref
+          .read(profileServiceProvider)
+          .rejectProfileWithReason(profile.id, reasonCtrl.text.trim());
       ref.invalidate(pendingProfilesProvider);
-    } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${profile.fullName} foi notificado(a).')),
+        );
       }
+    } catch (e) {
+      if (context.mounted) showErrorSnackBar(context, e);
     }
   }
 }
