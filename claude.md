@@ -949,8 +949,169 @@ Tudo que é código acabou. Dívidas restantes dependem 100% de acesso externo:
 
 ---
 
-**Última atualização:** 23 de Abril de 2026
+**Última atualização:** 23 de Abril de 2026 (fim do dia)
 **Status:** App completo ponta-a-ponta. Supabase remoto em sync
-(17 migrations, 12 edge functions, 6 buckets). 156 testes Flutter +
-13 testes landing verdes. `flutter analyze` sem novos issues.
-72+ commits pushados em `origin/main` (BaxiJen/favo_de_colorir).
+(18 migrations, 13 edge functions + auth-bridge, 6 buckets). 208 testes
+Flutter + 13 testes landing verdes. `flutter analyze` sem novos issues.
+~85 commits pushados em `origin/main` (BaxiJen/favo_de_colorir).
+Releases automáticos no push pra main (último: `v1.0.0+1-build.N`).
+
+---
+
+## Sessão 23 de Abril 2026 (noite) — pós-auditoria + fixes de produção
+
+Continuação do ciclo anterior com foco em entregar APK funcional
+pras alunas reais. ~12 commits novos.
+
+### Config do Supabase aplicado no dashboard (user fez)
+
+- **Site URL:** `https://fhqklezevuqtqenbhsja.supabase.co/functions/v1/auth-bridge`
+- **Redirect URLs:** `favo://auth-callback`, `favo://auth`, bridge URL
+- Conta `marcusantonio@id.uff.br` (pending de testes) aprovada manual
+  via service_role — Débora pode aprovar outras no app.
+
+### Fixes críticos de produção (aprendidos testando)
+
+- **Auth bridge com mojibake** (`1dcbfdd`): response já vinha
+  charset=utf-8 mas algum proxy reinterpretou como Latin-1. Defensivo:
+  acentos viraram entidades HTML (`&atilde;`, `&hellip;`), BOM utf-8,
+  X-Content-Type-Options nosniff, Cache-Control no-store.
+
+- **Pending approval agora tem edição** (`0c55872`): tela de "aguarde
+  aprovação" era 100% passiva — aluna nova olhava sem poder interagir.
+  Agora permite trocar foto + escrever bio enquanto espera. Admin vê
+  perfil completo na hora de aprovar. Uploads funcionam pra pending
+  (RLS não bloqueia, só checa ownership do path).
+
+- **Nova publicação fullscreen** (`b83bccc`): AlertDialog antigo era
+  apertado em mobile e tinha preview quebrado em web (blob url no
+  Image.network). Virou `_NewPostScreen` fullscreen (MaterialPageRoute):
+  TextField expansível, 500 chars com contador, até 4 fotos em grid
+  2x2, botões galeria + câmera separados na barra inferior, preview
+  via Image.memory(readAsBytes) estável em web, upload best-effort
+  (post sobe com fotos que deram certo, informa quantas falharam).
+
+- **Sessão residual vazava entre logins** (`c00764b`): user logou com
+  debora@ mas o app abriu na conta anterior (marcusantonio@, teste
+  anterior). AuthService.signIn agora faz `_auth.signOut(scope: local)`
+  ANTES do signInWithPassword quando já há currentUser, e login_screen
+  usa `response.user.id` direto em vez de currentUser (evita race).
+  signOut padronizado pra scope local (não derruba login simultâneo
+  em outros devices).
+
+- **Calendário role-aware** (`ff55472`): getMyWeekAulas/getAulasInRange
+  faziam join via turma_alunos — admin e teacher viam calendário vazio
+  porque não têm matrícula. Novo helper `_turmasVisiveisPara(userId)`:
+  admin/assistant null (tudo), teacher turmas onde teacher_id=userId,
+  student turmas matriculadas. UI adapta título/subtítulo por role
+  ("Agenda do Ateliê" vs "Minha Agenda").
+
+- **Encoding da semana** (`ff55472`): `weekday - 1` em vez de
+  `weekday % 7` — o último fazia domingo virar primeiro dia em
+  certos timezones.
+
+### Segurança (pós auditoria)
+
+- **`criar-aluna` e `enviar-recado` sem validação de admin**
+  (`b0cd057`): qualquer cliente com anon key podia criar usuário ou
+  disparar broadcast. Agora ambos exigem Authorization header +
+  role=admin. Audit log grava `create_user` e `broadcast_recado`.
+
+- **Webhook Mercado Pago aceitava POST forjado** (`b0cd057`): adicionado
+  HMAC-SHA256 validando header `x-signature` conforme padrão MP
+  (`manifest = id:<data.id>;request-id:<x-request-id>;ts:<ts>;`).
+  Timing-safe compare. Sem `MP_WEBHOOK_SECRET` configurado, aceita
+  como fallback de sandbox.
+
+- **Secrets locais reorganizados** (`b0cd057`): `app/.env` agora só
+  tem SUPABASE_URL + ANON_KEY (públicas por design). SERVICE_ROLE_KEY,
+  ACCESS_TOKEN, DB_PASSWORD movidos pra `supabase/.env.local`
+  (gitignored). Nunca vazaram em histórico.
+
+### CI/CD
+
+- **Pin `flutter-version: '3.41.6'`** + verbose build + upload gradle
+  logs em falha (`3cc1160`). O run anterior tinha falhado transiente
+  (rate limit baixando share_plus/app_links novas).
+
+- **Releases automáticos no push main** (`a915ecf`): após APK buildar,
+  workflow publica release `v1.0.0+1-build.N` como prerelease com
+  `app-release.apk` anexado. Corpo linka pro commit + mostra mensagem.
+
+- **Supabase URL/anon hardcoded com fallback** (`260b317`): CI nunca
+  teve secrets configurados, então APK de todos os releases saía
+  com `.env` vazio → "No host specified in URI" no login. Decisão
+  pragmática: hardcode URL e anon como default (ambas são públicas
+  por design — SDK envia em todo request HTTPS, o que protege é o
+  RLS). Ordem de resolução: `String.fromEnvironment` → dotenv →
+  defaults. Dívida anotada: migrar pra secrets + `--dart-define`
+  quando tiver staging/prod separados.
+
+### Testes (mea-culpa: TDD quebrado, corrigido retroativamente)
+
+Regra `feedback_tests_first` é "NUNCA implementar sem teste antes".
+Últimos ~15 commits atropelaram essa regra. Commit `9b823dc`
+recuperou com +52 testes de lógica pura:
+
+- `moderation_friendly_message_test` (15): 8 categorias de rejeição
+- `date_labels_test` (6): whenLabel Hoje/Amanhã/dia-semana/dd-MM
+- `time_parsing_test` (9): parseTimeOfDay com HH:MM:SS, clamps, round-trip
+- `batch_attendance_test` (7): agrupamento de markAttendanceBatch
+- `models_new_fields_test` (15): campos das migrations novas
+
+Refatorações pra testabilidade:
+- `_whenLabel` privado do home_screen → `whenLabel` público em
+  `core/date_labels.dart`
+- `_parseTimeOfDay` privado → `parseTimeOfDay` público em
+  `core/time_parsing.dart` (+ inverse `timeOfDayToString`)
+
+**Dívidas de teste restantes (precisam infra):**
+- Widget tests de `_NewPostScreen`, `_AttendanceRow`, `_MyFilaTile`,
+  `_PixDialog` (precisam mock Supabase + ProviderScope override)
+- Edge function tests (`criar-aluna`, `enviar-recado`, HMAC
+  webhook-mercadopago, auth-bridge) — precisam `deno test` separado
+- `_turmasVisiveisPara` role-aware — precisa mock do client
+
+### UX / auditoria
+
+Antes: 3 auditorias de personas (Débora, Leonora, Mariana) geraram
+top-10 gaps. 10 pagados (commits `12737af` + `374c0ce`):
+- Turma.location/address (Mariana sabia onde ir)
+- admin_users paginação + search server-side debounced
+- batch markAttendance (1 req por status em vez de N)
+- deep link magic + reset senha (`app_links`, Android intent-filter,
+  iOS CFBundleURLSchemes)
+- CSV download real via `share_plus`
+- ModerationResult categorizado com `friendlyMessage` amigável
+- Teacher pode criar crédito de reposição (RLS policy +
+  createRepositionCredit + dialog após marcar falta)
+- Aluna aceita vaga waitlist sozinha (não precisava mais de admin
+  intermediário)
+- Confirm dialogs em preço >30% e broadcast "todos"
+- Dialog explicando "Cancelar aula" vs "Todos faltaram"
+
+### Memórias atualizadas
+
+- `project_dominio_universal_links.md` — dívida aberta (checklist
+  pra migrar bridge HTML pra Android App Links + iOS Universal
+  Links quando comprar domínio próprio)
+
+### Pra amanhã
+
+1. **Testar o build mais novo** (assim que sair) — logando como
+   Débora deve ver calendário com aulas agora. Logando como aluna
+   ativa, UI de criar post deve ter galeria + câmera.
+
+2. **Config opcional de secrets no GitHub Actions** (Settings →
+   Secrets) — remover os hardcoded do `supabase_client.dart` quando
+   tiver staging/prod separados.
+
+3. **Dívida agenda P1 remanescente** (no `project_agenda_divida.md`):
+   cron pg_cron pra expirar waitlist 24h. Precisa Supabase Pro.
+
+4. **FCM real** quando tiver Firebase project (`flutterfire
+   configure` + descomentar chamadas em `push_service.dart`).
+
+5. **Mercado Pago em prod** — secrets `MP_ACCESS_TOKEN` +
+   `MP_WEBHOOK_SECRET` na edge function + URL do webhook no
+   dashboard MP. Código pronto.
