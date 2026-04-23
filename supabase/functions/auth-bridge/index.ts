@@ -9,14 +9,19 @@
  *
  * Deploy: `supabase functions deploy auth-bridge --no-verify-jwt`
  * Site URL: https://<project-ref>.supabase.co/functions/v1/auth-bridge
+ *
+ * Nota: todos os caracteres acentuados são escritos como HTML entities
+ * (&atilde; &eacute; &hellip; etc) pra ser imune a qualquer problema de
+ * charset em proxies, clientes de email ou browsers legados.
  */
 
 const HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Abrindo o Favo de Colorir…</title>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abrindo o Favo de Colorir&hellip;</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:grid;place-items:center;
@@ -46,11 +51,11 @@ const HTML = `<!DOCTYPE html>
 <body>
 <main>
   <div class="spin" aria-hidden="true"></div>
-  <h1>Abrindo o app…</h1>
+  <h1>Abrindo o app&hellip;</h1>
   <p>Se o Favo de Colorir estiver instalado, ele vai abrir em 1 segundo.</p>
   <div id="fb" class="fb">
-    <p><strong>Não abriu?</strong></p>
-    <p>Você tá no desktop ou ainda não instalou o app. Baixa pra continuar:</p>
+    <p><strong>N&atilde;o abriu?</strong></p>
+    <p>Voc&ecirc; t&aacute; no desktop ou ainda n&atilde;o instalou o app. Baixa pra continuar:</p>
     <div class="stores">
       <a class="st" href="#" data-todo="app-store">App Store</a>
       <a class="st alt" href="#" data-todo="google-play">Google Play</a>
@@ -73,11 +78,17 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// BOM + body garantem decoding UTF-8 mesmo em intermediários sniffers.
+const BOM = "﻿";
+const bytes = new TextEncoder().encode(BOM + HTML);
+
 Deno.serve(() => {
-  return new Response(HTML, {
+  return new Response(bytes, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Content-Language": "pt-BR",
     },
   });
 });
