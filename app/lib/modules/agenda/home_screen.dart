@@ -228,6 +228,11 @@ class HomeScreen extends ConsumerWidget {
           label: 'Recados',
           onTap: () => context.push('/admin/notifications'),
         ),
+        _AdminCard(
+          icon: Icons.history,
+          label: 'Auditoria',
+          onTap: () => context.push('/admin/audit'),
+        ),
       ],
     );
   }

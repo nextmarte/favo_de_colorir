@@ -182,6 +182,15 @@ class AgendaService {
 
   Future<void> deactivateTurma(String id) async {
     await updateTurma(id, {'is_active': false});
+    try {
+      final actorId = SupabaseConfig.auth.currentUser?.id;
+      await _client.from('audit_logs').insert({
+        'actor_id': actorId,
+        'action': 'deactivate_turma',
+        'resource_type': 'turma',
+        'resource_id': id,
+      });
+    } catch (_) {}
   }
 
   Future<Aula> createAula(Map<String, dynamic> aulaData) async {

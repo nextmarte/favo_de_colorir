@@ -77,10 +77,27 @@ class ProfileService {
 
   Future<void> approveProfile(String userId) async {
     await updateProfile(userId, {'status': 'active'});
+    await _auditLog('approve_profile', userId);
   }
 
   Future<void> rejectProfile(String userId) async {
     await updateProfile(userId, {'status': 'blocked'});
+    await _auditLog('reject_profile', userId);
+  }
+
+  /// Fire-and-forget registro de auditoria (nunca throw).
+  Future<void> _auditLog(String action, String resourceId,
+      {Map<String, dynamic>? changes}) async {
+    try {
+      final actorId = SupabaseConfig.auth.currentUser?.id;
+      await _client.from('audit_logs').insert({
+        'actor_id': actorId,
+        'action': action,
+        'resource_type': 'profile',
+        'resource_id': resourceId,
+        'changes': changes,
+      });
+    } catch (_) {}
   }
 
   /// Admin cria aluna via edge function
@@ -141,5 +158,7 @@ class ProfileService {
           : 'Seu cadastro não foi aprovado: $reason',
       'type': 'approval',
     });
+    await _auditLog('reject_profile', userId,
+        changes: {'reason': reason});
   }
 }
