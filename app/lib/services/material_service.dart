@@ -1,7 +1,11 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/supabase_client.dart';
 import '../models/peca.dart';
+import '../models/peca_foto.dart';
 import '../models/registro_argila.dart';
 
 final materialServiceProvider = Provider<MaterialService>((ref) {
@@ -148,6 +152,66 @@ class MaterialService {
         .eq('aula_id', aulaId)
         .order('created_at');
     return data.map((json) => Peca.fromJson(json)).toList();
+  }
+
+  // ─── Fotos de peça ──────────────────────────────
+
+  /// Upload de uma foto da peça. Aceita bytes (web) ou File (mobile).
+  ///
+  /// Retorna o [PecaFoto] inserido em peca_fotos.
+  Future<PecaFoto> uploadPecaPhoto({
+    required String pecaId,
+    required String uploadedBy,
+    required String filename,
+    Uint8List? bytes,
+    File? file,
+    String? caption,
+  }) async {
+    assert(bytes != null || file != null,
+        'Forneça bytes (web) ou file (mobile).');
+
+    final ext = filename.split('.').last.toLowerCase();
+    final storagePath =
+        '$pecaId/${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+    final storage = _client.storage.from('pecas');
+    if (bytes != null) {
+      await storage.uploadBinary(storagePath, bytes);
+    } else {
+      await storage.upload(storagePath, file!);
+    }
+
+    final inserted = await _client
+        .from('peca_fotos')
+        .insert({
+          'peca_id': pecaId,
+          'storage_path': storagePath,
+          'caption': caption,
+          'uploaded_by': uploadedBy,
+        })
+        .select()
+        .single();
+
+    return PecaFoto.fromJson(inserted);
+  }
+
+  Future<List<PecaFoto>> getPecaPhotos(String pecaId) async {
+    final data = await _client
+        .from('peca_fotos')
+        .select()
+        .eq('peca_id', pecaId)
+        .order('created_at');
+    return data.map((j) => PecaFoto.fromJson(j)).toList();
+  }
+
+  /// URL pública pra renderizar a foto (bucket pecas é public=true).
+  String getPecaPhotoUrl(String storagePath) {
+    return _client.storage.from('pecas').getPublicUrl(storagePath);
+  }
+
+  Future<void> deletePecaPhoto(PecaFoto foto) async {
+    await _client.storage.from('pecas').remove([foto.storagePath]);
+    await _client.from('peca_fotos').delete().eq('id', foto.id);
   }
 
   // ─── Admin: config ──────────────────────────────

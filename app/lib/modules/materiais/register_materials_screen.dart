@@ -1,6 +1,11 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../core/error_handler.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/peca.dart';
@@ -37,6 +42,7 @@ class _RegisterMaterialsScreenState
   String? _selectedPecaId;
   PecaStage _selectedStage = PecaStage.modeled;
   final _notesCtrl = TextEditingController();
+  final List<XFile> _pendingPhotos = [];
 
   @override
   void dispose() {
@@ -44,6 +50,20 @@ class _RegisterMaterialsScreenState
     _kgReturnedCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhotos() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage(
+      imageQuality: 82,
+      maxWidth: 1600,
+    );
+    if (picked.isEmpty) return;
+    setState(() => _pendingPhotos.addAll(picked));
+  }
+
+  void _removePhoto(int index) {
+    setState(() => _pendingPhotos.removeAt(index));
   }
 
   @override
@@ -204,6 +224,28 @@ class _RegisterMaterialsScreenState
                 ),
                 const SizedBox(height: 16),
 
+                // ── Fotos ──
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Fotos da peça',
+                      style: Theme.of(context).textTheme.labelMedium),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Registre a peça como ela está agora. Aceita várias fotos.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _PhotoStrip(
+                  photos: _pendingPhotos,
+                  onPick: _isLoading ? null : _pickPhotos,
+                  onRemove: _isLoading ? null : _removePhoto,
+                ),
+                const SizedBox(height: 16),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -228,9 +270,23 @@ class _RegisterMaterialsScreenState
       return;
     }
 
+    final kgUsed = double.tryParse(_kgUsedCtrl.text.replaceAll(',', '.'));
+    final kgReturned =
+        double.tryParse(_kgReturnedCtrl.text.replaceAll(',', '.')) ?? 0;
+    if (kgUsed == null || kgUsed <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Peso usado precisa ser um número maior que zero')),
+      );
+      return;
+    }
+    if (kgReturned < 0 || kgReturned > kgUsed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Peso devolvido inválido')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    final kgUsed = double.parse(_kgUsedCtrl.text);
-    final kgReturned = double.tryParse(_kgReturnedCtrl.text) ?? 0;
     final registeredBy = SupabaseConfig.auth.currentUser!.id;
 
     try {
@@ -271,7 +327,7 @@ class _RegisterMaterialsScreenState
       } catch (offlineErr) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro: $offlineErr')),
+            SnackBar(content: Text(friendlyError(offlineErr))),
           );
         }
       }
@@ -293,7 +349,7 @@ class _RegisterMaterialsScreenState
     final stageStr = _selectedStage.name;
 
     try {
-      await ref.read(materialServiceProvider).registerPiece(
+      final peca = await ref.read(materialServiceProvider).registerPiece(
             studentId: widget.studentId,
             aulaId: widget.aulaId,
             tipoPecaId: _selectedPecaId!,
@@ -301,11 +357,34 @@ class _RegisterMaterialsScreenState
             notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
             registeredBy: registeredBy,
           );
+
+      // Upload das fotos anexadas (best-effort: falha de foto não impede registro)
+      final uploadErrors = <String>[];
+      for (final photo in List<XFile>.from(_pendingPhotos)) {
+        try {
+          final bytes = kIsWeb ? await photo.readAsBytes() : null;
+          await ref.read(materialServiceProvider).uploadPecaPhoto(
+                pecaId: peca.id,
+                uploadedBy: registeredBy,
+                filename: photo.name,
+                bytes: bytes,
+                file: kIsWeb ? null : File(photo.path),
+              );
+        } catch (e) {
+          uploadErrors.add(photo.name);
+        }
+      }
+
       _notesCtrl.clear();
+      setState(() => _pendingPhotos.clear());
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Peça registrada!')),
-        );
+        final msg = uploadErrors.isEmpty
+            ? (_pendingPhotos.isEmpty && peca.id.isNotEmpty
+                ? 'Peça registrada!'
+                : 'Peça e fotos registradas!')
+            : 'Peça registrada — mas ${uploadErrors.length} foto(s) falharam.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       try {
@@ -326,13 +405,133 @@ class _RegisterMaterialsScreenState
       } catch (offlineErr) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro: $offlineErr')),
+            SnackBar(content: Text(friendlyError(offlineErr))),
           );
         }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+}
+
+class _PhotoStrip extends StatelessWidget {
+  final List<XFile> photos;
+  final VoidCallback? onPick;
+  final void Function(int)? onRemove;
+
+  const _PhotoStrip({
+    required this.photos,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: photos.length + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          if (i == photos.length) {
+            return _AddPhotoTile(onTap: onPick);
+          }
+          return _PhotoTile(
+            photo: photos[i],
+            onRemove: onRemove == null ? null : () => onRemove!(i),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AddPhotoTile extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _AddPhotoTile({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 96,
+        decoration: BoxDecoration(
+          color: FavoColors.surfaceContainerLow,
+          border: Border.all(
+            color: FavoColors.outlineVariant,
+            style: BorderStyle.solid,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_a_photo_outlined,
+                color: FavoColors.primary, size: 26),
+            const SizedBox(height: 4),
+            Text('Adicionar',
+                style: Theme.of(context).textTheme.labelSmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoTile extends StatelessWidget {
+  final XFile photo;
+  final VoidCallback? onRemove;
+  const _PhotoTile({required this.photo, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: kIsWeb
+              ? FutureBuilder<Uint8List>(
+                  future: photo.readAsBytes(),
+                  builder: (_, snap) {
+                    if (!snap.hasData) {
+                      return const SizedBox(
+                        width: 96,
+                        height: 96,
+                        child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+                    return Image.memory(snap.data!,
+                        width: 96, height: 96, fit: BoxFit.cover);
+                  },
+                )
+              : Image.file(File(photo.path),
+                  width: 96, height: 96, fit: BoxFit.cover),
+        ),
+        if (onRemove != null)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close,
+                    size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 

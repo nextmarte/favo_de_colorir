@@ -19,7 +19,7 @@ class Presenca {
     required this.aulaId,
     required this.studentId,
     required this.confirmation,
-    required this.attendanceStatus,
+    this.attendanceStatus = AttendanceStatus.pending,
     this.attended,
     required this.isMakeup,
     this.confirmedAt,
