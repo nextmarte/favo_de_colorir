@@ -1,0 +1,161 @@
+---
+const tiles = [
+  { label: 'Bancada de modelagem', stop1: '#c75b39', stop2: '#5d1900' },
+  { label: 'Forno e queimas', stop1: '#8d4b00', stop2: '#3a1d00' },
+  { label: 'Esmaltação', stop1: '#ffdcc3', stop2: '#c75b39' },
+  { label: 'Acervo de moldes', stop1: '#f6ece5', stop2: '#8d4b00' },
+];
+---
+
+<section id="atelie" class="studio section section--surface-deep" aria-labelledby="studio-title">
+  <div class="container studio__grid">
+    <div class="studio__copy">
+      <span class="eyebrow">O ateliê</span>
+      <h2 id="studio-title" class="section-title studio__title">
+        Tijuca, Rio de Janeiro.<br />
+        <em>Casa antiga, mãos cheias de barro.</em>
+      </h2>
+      <p class="prose">
+        O Favo de Colorir nasceu como espaço para quem queria moldar com calma —
+        e cresceu para cerca de oitenta alunas semanais, com aulas regulares,
+        oficinas pontuais e um forno que não para. O app serve esse ritmo, não
+        o contrário.
+      </p>
+
+      <ul class="studio__facts">
+        <li>
+          <span class="studio__fact-label">Endereço</span>
+          <span class="studio__fact-value">Tijuca, Rio de Janeiro · RJ</span>
+        </li>
+        <li>
+          <span class="studio__fact-label">Modalidades</span>
+          <span class="studio__fact-value">Regulares · Oficinas · Avulsas</span>
+        </li>
+        <li>
+          <span class="studio__fact-label">Capacidade</span>
+          <span class="studio__fact-value">Turmas de 8 — oficinas até 10</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="studio__gallery" aria-hidden="true">
+      {
+        tiles.map((tile, i) => (
+          <figure class={`tile tile--${i + 1}`} style={`--c1:${tile.stop1};--c2:${tile.stop2};`}>
+            <span class="tile__label">{tile.label}</span>
+            <span class="tile__index">0{i + 1}</span>
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .studio__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(2.5rem, 5vw, 4rem);
+    align-items: start;
+  }
+
+  @media (min-width: 880px) {
+    .studio__grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .studio__copy { display: grid; gap: var(--s-5); max-width: 36rem; }
+
+  .studio__title em {
+    font-style: italic;
+    color: var(--secondary);
+    font-weight: 500;
+  }
+
+  .studio__facts {
+    display: grid;
+    gap: var(--s-4);
+    margin-block-start: var(--s-4);
+    padding-block-start: var(--s-4);
+    border-top: 1px dashed rgba(133, 117, 104, 0.32);
+  }
+
+  .studio__facts li {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: var(--s-4);
+    align-items: baseline;
+  }
+
+  .studio__fact-label {
+    font-size: var(--fs-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--on-surface-faint);
+  }
+
+  .studio__fact-value {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+    color: var(--on-surface);
+  }
+
+  .studio__gallery {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: var(--s-3);
+    aspect-ratio: 5 / 4;
+    max-width: 36rem;
+    justify-self: end;
+  }
+
+  @media (max-width: 879px) { .studio__gallery { justify-self: stretch; } }
+
+  .tile {
+    position: relative;
+    border-radius: var(--r-card);
+    background:
+      radial-gradient(120% 120% at 30% 20%, var(--c1), var(--c2)),
+      var(--surface-deep);
+    color: rgba(255, 248, 244, 0.9);
+    padding: var(--s-4);
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform var(--d-medium) var(--ease-out);
+  }
+
+  .tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.18), transparent 50%);
+    z-index: 0;
+  }
+
+  .tile--1 { grid-row: span 2; }
+  .tile:hover { transform: translateY(-3px); }
+
+  .tile__label {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .tile__index {
+    position: absolute;
+    bottom: var(--s-4);
+    right: var(--s-5);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    z-index: 1;
+    opacity: 0.85;
+  }
+</style>

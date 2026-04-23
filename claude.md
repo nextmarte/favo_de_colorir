@@ -619,6 +619,17 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 - Trigger `handle_clay_purchase`: soma ao registrar compra (upsert)
 - Alerta visual quando estoque abaixo do nível mínimo
 
+### Landing Page (Astro 5 + Vercel)
+- Diretório: `landing/`. Stack: Astro 5 estático + Vanilla CSS (sem Tailwind) + TypeScript strict.
+- Tokens em `landing/src/styles/tokens.css` espelham `app/lib/core/theme.dart` (paleta, fontes, radii) — fonte de verdade do Design System.
+- Fontes via Google Fonts: Epilogue (display, italic 500 para acentos) + Manrope (body/labels).
+- Componentes: `Hero`, `ValueProps`, `Features`, `Plans`, `Studio`, `ContactCTA`, `Footer` + primitivos `ui/Button` e `ui/Card`.
+- Hero com title fluid (`clamp`), brushstroke SVG terracota animado, orb radial-gradient orgânico flutuando.
+- TDD: Vitest com Astro Container API (`Button`, `Plans`, `Hero` cobertos via unit) + Playwright chromium para 5 smoke E2E (carga, planos, âncora, mobile 375px, anchors).
+- CI: `.github/workflows/landing-ci.yml` separado do `flutter-ci.yml`, dispara em mudanças `landing/**`. Roda check + vitest + build + playwright.
+- Deploy Vercel (`vercel.json`) — falta `vercel link && vercel --prod` (manual).
+- Conteúdo placeholder marcado com `data-todo` no markup. Lista do que pedir à Débora: `docs/landing_assets_todo.md`.
+
 ### Edge Functions (5 deployed)
 - `enviar-notificacao`: confirmação 24h, lembrete 6h, aprovação
 - `totalizar-cobranca`: calcula mensalidade + argila + queimas
@@ -710,7 +721,7 @@ Código da IA pode ter vulnerabilidades sutis. Revise especialmente:
 ### Média
 - [ ] Integração Nuvemshop (cartão, parcelamento)
 - [ ] Moderação IA real (Claude/OpenAI API ao invés de keyword)
-- [ ] Landing page (Astro + Vercel)
+- [x] Landing page (Astro + Vercel) — código completo, falta deploy + assets reais (ver `docs/landing_assets_todo.md`)
 - [ ] Analytics (DAU/MAU)
 
 ### Baixa

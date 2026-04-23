@@ -1,0 +1,96 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container footer__inner">
+    <div class="footer__brand">
+      <p class="footer__mark">Favo de Colorir</p>
+      <p class="footer__tag">Ateliê de cerâmica · Tijuca, RJ</p>
+    </div>
+
+    <nav class="footer__nav" aria-label="Navegação do rodapé">
+      <ul>
+        <li><a href="#produto">O aplicativo</a></li>
+        <li><a href="#planos">Planos</a></li>
+        <li><a href="#atelie">O ateliê</a></li>
+        <li><a href="#contato">Conversar</a></li>
+      </ul>
+    </nav>
+
+    <div class="footer__meta">
+      <p class="footer__credits">© {year} Favo de Colorir.</p>
+      <p class="footer__build">Feito por <a href="https://github.com/BaxiJen">BaxiJen</a> com Astro.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    padding-block: var(--s-12) var(--s-8);
+    background: var(--surface);
+    color: var(--on-surface-muted);
+  }
+
+  .footer__inner {
+    display: grid;
+    gap: var(--s-8);
+    grid-template-columns: 1fr;
+    align-items: end;
+  }
+
+  @media (min-width: 720px) {
+    .footer__inner {
+      grid-template-columns: auto 1fr auto;
+      gap: var(--s-12);
+    }
+  }
+
+  .footer__mark {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    color: var(--on-surface);
+  }
+
+  .footer__tag {
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--on-surface-faint);
+  }
+
+  .footer__nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-5);
+    justify-content: center;
+  }
+
+  .footer__nav a {
+    font-size: var(--fs-body);
+    color: var(--on-surface);
+    border-bottom: 1px dashed transparent;
+    transition: border-color var(--d-fast) var(--ease-out);
+  }
+
+  .footer__nav a:hover { border-bottom-color: var(--secondary); }
+
+  .footer__meta {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    text-align: right;
+  }
+
+  @media (max-width: 719px) {
+    .footer__meta { text-align: left; }
+    .footer__nav ul { justify-content: flex-start; }
+  }
+
+  .footer__build a {
+    color: var(--primary);
+    border-bottom: 1px dashed currentColor;
+  }
+</style>

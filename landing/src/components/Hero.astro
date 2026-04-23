@@ -1,0 +1,196 @@
+---
+import Button from './ui/Button.astro';
+---
+
+<header class="hero" aria-labelledby="hero-title">
+  <div class="hero__rail" aria-hidden="true">
+    <span class="vlabel">Ateliê · Tijuca · desde 2018</span>
+  </div>
+
+  <div class="container hero__inner">
+    <p class="eyebrow hero__eyebrow reveal">Favo de Colorir · Tijuca, RJ</p>
+
+    <h1 id="hero-title" class="display hero__title">
+      <span class="reveal delay-1">Seu ateliê</span>
+      <span class="reveal delay-2 hero__title--accent">de cerâmica</span>
+      <span class="reveal delay-3">sem WhatsApp,</span>
+      <span class="reveal delay-4">sem caderno.</span>
+    </h1>
+
+    <p class="prose hero__sub reveal delay-5">
+      Do controle de argila à cobrança automática, do feed pessoal de cada peça
+      à comunidade da turma — tudo no celular das suas alunas, com o tom de quem
+      faz à mão.
+    </p>
+
+    <div class="hero__ctas reveal delay-6">
+      <Button href="#planos">Quero conhecer</Button>
+      <Button href="#alunas" variant="ghost">Para alunas: baixar app</Button>
+    </div>
+
+    <dl class="hero__stats reveal delay-6">
+      <div>
+        <dt>Alunas ativas</dt>
+        <dd>~80</dd>
+      </div>
+      <div>
+        <dt>Cobrança manual reduzida em</dt>
+        <dd>2 dias → minutos</dd>
+      </div>
+      <div>
+        <dt>Apoio</dt>
+        <dd>iOS · Android · Web</dd>
+      </div>
+    </dl>
+  </div>
+
+  <svg class="hero__brush" viewBox="0 0 480 60" aria-hidden="true" focusable="false">
+    <path
+      d="M5 38 C 90 8, 180 56, 280 28 S 460 18, 478 32"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+  </svg>
+
+  <svg class="hero__orb" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+    <defs>
+      <radialGradient id="orb-grad" cx="35%" cy="32%" r="70%">
+        <stop offset="0%" stop-color="#ffd9b5" />
+        <stop offset="55%" stop-color="#c75b39" />
+        <stop offset="100%" stop-color="#5d1900" />
+      </radialGradient>
+    </defs>
+    <circle cx="100" cy="100" r="92" fill="url(#orb-grad)" />
+    <ellipse cx="78" cy="68" rx="22" ry="9" fill="rgba(255,255,255,0.32)" />
+  </svg>
+</header>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: clamp(36rem, 92vh, 56rem);
+    padding-block: clamp(5rem, 10vh, 8rem) clamp(4rem, 8vh, 6rem);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .hero__rail {
+    position: absolute;
+    inset: 0 auto 0 clamp(0.75rem, 2vw, 2rem);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  @media (max-width: 720px) { .hero__rail { display: none; } }
+
+  .hero__inner {
+    display: grid;
+    gap: clamp(1.25rem, 2vw, 2rem);
+    max-width: 64rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero__eyebrow { color: var(--on-surface-muted); }
+
+  .hero__title {
+    font-size: var(--fs-h1);
+    line-height: 0.96;
+    letter-spacing: var(--tracking-display);
+    margin-block-start: var(--s-3);
+  }
+
+  .hero__title span {
+    display: block;
+  }
+
+  .hero__title--accent {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--secondary);
+    padding-inline-start: clamp(1.5rem, 6vw, 5rem);
+  }
+
+  .hero__sub {
+    margin-block-start: var(--s-6);
+    max-width: 38rem;
+  }
+
+  .hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+    margin-block-start: var(--s-6);
+  }
+
+  @media (max-width: 480px) {
+    .hero__ctas { flex-direction: column; align-items: stretch; }
+    .hero__ctas :global(.btn) { justify-content: space-between; }
+  }
+
+  .hero__stats {
+    margin-block-start: clamp(2.5rem, 5vw, 4rem);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--s-6);
+    padding-block-start: var(--s-6);
+    border-top: 1px solid rgba(133, 117, 104, 0.22);
+    max-width: 52rem;
+  }
+
+  .hero__stats div { display: grid; gap: 0.25rem; }
+
+  .hero__stats dt {
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--on-surface-muted);
+  }
+
+  .hero__stats dd {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    color: var(--on-surface);
+  }
+
+  .hero__brush {
+    position: absolute;
+    bottom: clamp(2rem, 6vw, 4rem);
+    right: clamp(1rem, 4vw, 4rem);
+    width: clamp(220px, 28vw, 420px);
+    color: var(--secondary);
+    opacity: 0.85;
+    z-index: 1;
+    animation: brushDraw 1400ms var(--ease-out) 600ms both;
+  }
+
+  @keyframes brushDraw {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 0.85; transform: translateX(0); }
+  }
+
+  .hero__orb {
+    position: absolute;
+    top: clamp(-3rem, -4vw, -1rem);
+    right: clamp(-4rem, -6vw, -2rem);
+    width: clamp(180px, 26vw, 360px);
+    z-index: 0;
+    filter: drop-shadow(0 30px 50px rgba(141, 75, 0, 0.18));
+    animation: orbFloat 9s var(--ease-in-out) infinite;
+  }
+
+  @keyframes orbFloat {
+    0%,100% { transform: translateY(0) rotate(-2deg); }
+    50%     { transform: translateY(-14px) rotate(2deg); }
+  }
+
+  @media (max-width: 720px) {
+    .hero__orb { width: 200px; opacity: 0.85; top: -1rem; right: -3rem; }
+    .hero__brush { width: 180px; bottom: 1rem; right: 0.5rem; }
+  }
+</style>

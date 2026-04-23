@@ -1,0 +1,268 @@
+---
+import Card from './ui/Card.astro';
+import Button from './ui/Button.astro';
+
+interface Plan {
+  name: string;
+  cadence: string;
+  highlight?: string;
+  perks: string[];
+  cancellation: string;
+  featured?: boolean;
+}
+
+const plans: Plan[] = [
+  {
+    name: 'Mensal',
+    cadence: 'todo mês, sem amarras',
+    perks: ['Aulas semanais regulares', 'Inclui acervo de moldes', 'Confirmação de presença pelo app'],
+    cancellation: 'Aviso 10–15 dias antes da renovação.',
+  },
+  {
+    name: 'Trimestral',
+    cadence: 'a cada três meses',
+    highlight: 'desconto progressivo',
+    perks: ['Tudo do Mensal', 'Reposição estendida', 'Prioridade em oficinas internas'],
+    cancellation: 'Multa proporcional de 20% do valor restante.',
+    featured: true,
+  },
+  {
+    name: 'Semestral',
+    cadence: 'seis meses de jornada',
+    highlight: 'maior desconto',
+    perks: ['Tudo do Trimestral', 'Convite para visitas a fornalhas', 'Ensaio fotográfico das peças'],
+    cancellation: 'Multa proporcional de 20% do valor restante.',
+  },
+  {
+    name: 'Avulsa',
+    cadence: 'aula única',
+    perks: ['Para quem já é da casa', 'Escolhe a turma com vaga', 'Argila e queima cobradas à parte'],
+    cancellation: 'Pagamento único, sem renovação.',
+  },
+  {
+    name: 'Oficina',
+    cadence: 'experiência fechada',
+    perks: ['Tudo incluso (argila, queimas, café)', 'Datas pontuais no calendário', 'Ideal para presentear'],
+    cancellation: 'Pagamento único, vaga garantida.',
+  },
+];
+---
+
+<section id="planos" class="section section--surface-low plans">
+  <div class="container plans__inner">
+    <header class="plans__head">
+      <span class="eyebrow">Planos &amp; mensalidades</span>
+      <h2 class="section-title plans__title">
+        Da aula avulsa <em>ao convite</em><br />para uma temporada inteira no ateliê.
+      </h2>
+      <p class="prose plans__lead">
+        Cada plano é desenhado para o tipo de envolvimento que você quer com o barro.
+        Os valores ficam <em>sob consulta</em> com a Débora — é uma conversa, não uma vitrine.
+      </p>
+    </header>
+
+    <ol class="plans__grid">
+      {
+        plans.map((plan, idx) => (
+          <li>
+            <Card tone={plan.featured ? 'shadow' : 'paper'} class={`plan-card${plan.featured ? ' plan-card--featured' : ''}`}>
+              <header class="plan-card__head">
+                <span class="plan-card__index">{String(idx + 1).padStart(2, '0')}</span>
+                <h3 class="plan-card__name">{plan.name}</h3>
+                <p class="plan-card__cadence">{plan.cadence}</p>
+                {plan.highlight && <span class="plan-card__highlight">{plan.highlight}</span>}
+              </header>
+
+              <ul class="plan-card__perks">
+                {plan.perks.map((perk) => (
+                  <li>
+                    <span class="plan-card__bullet" aria-hidden="true">·</span>
+                    {perk}
+                  </li>
+                ))}
+              </ul>
+
+              <footer class="plan-card__foot">
+                <p class="plan-card__price">
+                  <span class="plan-card__price-label">Investimento</span>
+                  <span class="plan-card__price-value">Sob consulta</span>
+                </p>
+                <p class="plan-card__cancel">{plan.cancellation}</p>
+              </footer>
+            </Card>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="plans__cta">
+      <Button href="#contato">Conversar com a Débora</Button>
+      <p class="plans__cta-aside">Resposta normalmente no mesmo dia, pelo WhatsApp do ateliê.</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .plans { overflow: hidden; }
+
+  .plans__inner {
+    display: grid;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .plans__head {
+    display: grid;
+    gap: var(--s-5);
+    max-width: 56rem;
+  }
+
+  .plans__title em {
+    font-style: italic;
+    color: var(--secondary);
+    font-weight: 500;
+  }
+
+  .plans__lead em {
+    font-style: italic;
+    color: var(--on-surface);
+    font-weight: 500;
+  }
+
+  .plans__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: var(--s-5);
+    align-items: stretch;
+  }
+
+  .plans__grid > li { display: flex; }
+
+  .plan-card {
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--s-6);
+    min-height: 24rem;
+  }
+
+  .plan-card--featured {
+    transform: translateY(-12px);
+  }
+
+  @media (max-width: 720px) {
+    .plan-card--featured { transform: none; }
+  }
+
+  .plan-card__head { display: grid; gap: var(--s-2); }
+
+  .plan-card__index {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    letter-spacing: var(--tracking-wide);
+    color: var(--on-surface-faint);
+  }
+
+  .plan-card--featured .plan-card__index { color: var(--surface-deep); }
+
+  .plan-card__name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+    letter-spacing: var(--tracking-tight);
+    line-height: 1.05;
+  }
+
+  .plan-card__cadence {
+    font-size: var(--fs-body);
+    color: inherit;
+    opacity: 0.78;
+  }
+
+  .plan-card__highlight {
+    align-self: flex-start;
+    margin-top: var(--s-2);
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--r-pill);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    background: var(--secondary);
+    color: var(--on-primary);
+  }
+
+  .plan-card__perks {
+    display: grid;
+    gap: var(--s-2);
+    font-size: var(--fs-body);
+  }
+
+  .plan-card__perks li {
+    display: grid;
+    grid-template-columns: 1.25rem 1fr;
+    gap: var(--s-2);
+    line-height: 1.4;
+  }
+
+  .plan-card__bullet {
+    font-family: var(--font-display);
+    color: var(--secondary);
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .plan-card--featured .plan-card__bullet { color: var(--secondary-container); }
+
+  .plan-card__foot {
+    display: grid;
+    gap: var(--s-2);
+    padding-top: var(--s-5);
+    border-top: 1px dashed rgba(133, 117, 104, 0.28);
+  }
+
+  .plan-card--featured .plan-card__foot {
+    border-top-color: rgba(255, 248, 244, 0.18);
+  }
+
+  .plan-card__price {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-3);
+  }
+
+  .plan-card__price-label {
+    font-size: 0.78rem;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    opacity: 0.66;
+  }
+
+  .plan-card__price-value {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .plan-card__cancel {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    opacity: 0.78;
+  }
+
+  .plans__cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-5);
+    justify-content: center;
+    text-align: center;
+  }
+
+  .plans__cta-aside {
+    font-size: 0.95rem;
+    color: var(--on-surface-muted);
+    max-width: 22rem;
+  }
+</style>

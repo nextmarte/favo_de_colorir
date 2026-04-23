@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.astro/
+.vercel/
+.env
+.env.local
+.env.*.local
+
+# Test artifacts
+playwright-report/
+test-results/
+coverage/
+
+# Editor
+.DS_Store
+*.log

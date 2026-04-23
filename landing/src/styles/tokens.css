@@ -1,0 +1,108 @@
+/*
+ * Design System: Artisanal Modernism
+ * Source of truth: app/lib/core/theme.dart
+ * Philosophy: tonal depth via surface hierarchy, no borders, warm palette,
+ * editorial typography. Pair Epilogue (display) with Manrope (body/labels).
+ */
+
+:root {
+  /* Surface hierarchy — clay/paper */
+  --surface-lowest: #ffffff;
+  --surface-low:    #fcf2ea;
+  --surface:        #fff8f4;
+  --surface-mid:    #f6ece5;
+  --surface-high:   #f0e5dd;
+  --surface-deep:   #eae1d9;
+
+  /* Brand */
+  --primary:                #8d4b00; /* honey */
+  --primary-bright:         #b15f00;
+  --on-primary:             #ffffff;
+  --primary-container:      #ffdcc3;
+  --on-primary-container:   #2d1100;
+
+  --secondary:              #c75b39; /* terracotta */
+  --secondary-container:    #ffdbcf;
+  --on-secondary-container: #5d1900;
+
+  /* Text & lines */
+  --on-surface:         #1f1b17;
+  --on-surface-muted:   #554336;
+  --on-surface-faint:   #857568;
+  --outline-faint:      #dbc2b0;
+
+  /* Semantic */
+  --success: #4caf50;
+  --warning: #ffa726;
+  --error:   #ba1a1a;
+
+  /* Type families */
+  --font-display: "Epilogue", ui-serif, Georgia, "Times New Roman", serif;
+  --font-body:    "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    ui-monospace, "JetBrains Mono", Menlo, monospace;
+
+  /* Type scale (clamp for fluid) */
+  --fs-eyebrow:    0.75rem;   /* 12 */
+  --fs-body:       1rem;      /* 16 */
+  --fs-body-lg:    1.125rem;  /* 18 */
+  --fs-title:      1.375rem;  /* 22 */
+  --fs-h3:         clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  --fs-h2:         clamp(2rem, 1.4rem + 2.4vw, 3rem);
+  --fs-h1:         clamp(2.75rem, 1.8rem + 5vw, 6.5rem);
+  --fs-display:    clamp(4rem, 2.4rem + 8vw, 9.5rem);
+
+  /* Tracking */
+  --tracking-display: -0.04em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.08em;
+  --tracking-eyebrow: 0.18em;
+
+  /* Line heights */
+  --lh-tight:  1.02;
+  --lh-snug:   1.18;
+  --lh-body:   1.55;
+
+  /* Radii */
+  --r-sm:   8px;
+  --r-md:   16px;
+  --r-card: 20px;
+  --r-lg:   28px;
+  --r-pill: 999px;
+
+  /* Spacing scale */
+  --s-1:  0.25rem;
+  --s-2:  0.5rem;
+  --s-3:  0.75rem;
+  --s-4:  1rem;
+  --s-5:  1.25rem;
+  --s-6:  1.5rem;
+  --s-8:  2rem;
+  --s-10: 2.5rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+  --s-20: 5rem;
+  --s-24: 6rem;
+  --s-32: 8rem;
+
+  /* Layout */
+  --max-content: 78rem;       /* 1248px */
+  --max-prose:   42rem;
+  --gutter:      clamp(1.25rem, 4vw, 3rem);
+
+  /* Motion */
+  --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --d-fast:   180ms;
+  --d-medium: 360ms;
+  --d-slow:   720ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

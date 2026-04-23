@@ -34,8 +34,13 @@ favo_de_colorir/
 │   ├── functions/        ← 3 edge functions (notificação, totalização, exportação CSV)
 │   ├── seed.sql
 │   └── config.toml
+├── landing/              ← Landing page Astro + Vercel
+│   ├── src/              ← Components, layouts, styles, pages
+│   ├── tests/            ← Vitest (unit) + Playwright (e2e)
+│   └── README.md
 ├── docs/
 │   ├── prd_favo_v1.2.md
+│   ├── landing_assets_todo.md  ← assets pendentes da Débora
 │   └── PLANO_IMPLEMENTACAO.md
 └── claude.md             ← Spec técnica + princípios de trabalho com IA
 ```
@@ -95,6 +100,14 @@ supabase db push         # Aplicar migrations na cloud
 supabase functions deploy # Deploy edge functions
 flutter build appbundle --release  # Build Android
 flutter build web --release        # Build Web
+
+# Landing
+cd landing
+npm install
+npm run dev               # http://localhost:4321
+npm run test              # Vitest unit
+npm run test:e2e          # Playwright smoke (precisa chromium instalado)
+npm run build             # build estático em dist/
 ```
 
 ## Equipe

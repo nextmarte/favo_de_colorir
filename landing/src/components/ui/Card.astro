@@ -1,0 +1,36 @@
+---
+type Tone = 'paper' | 'clay' | 'shadow';
+type Tag = 'div' | 'article' | 'section' | 'li';
+
+interface Props {
+  tone?: Tone;
+  as?: Tag;
+  class?: string;
+}
+
+const { tone = 'paper', as: Tag = 'article', class: extraClass = '' } = Astro.props;
+const className = ['card', `card--${tone}`, extraClass].filter(Boolean).join(' ');
+---
+
+<Tag class={className}>
+  <slot />
+</Tag>
+
+<style>
+  .card {
+    border-radius: var(--r-card);
+    padding: clamp(1.5rem, 2.5vw, 2.25rem);
+    position: relative;
+    transition: transform var(--d-medium) var(--ease-out);
+    will-change: transform;
+  }
+
+  .card--paper { background: var(--surface-lowest); color: var(--on-surface); }
+  .card--clay  { background: var(--surface-mid);    color: var(--on-surface); }
+  .card--shadow {
+    background: var(--on-surface);
+    color: var(--surface);
+  }
+
+  .card:hover { transform: translateY(-2px); }
+</style>

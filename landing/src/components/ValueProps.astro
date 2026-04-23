@@ -1,0 +1,118 @@
+---
+interface Prop {
+  number: string;
+  title: string;
+  body: string;
+}
+
+const props: Prop[] = [
+  {
+    number: '01',
+    title: 'Cobrança da argila por consumo',
+    body: 'Cada quilo registrado pela professora vira linha na cobrança do mês — sem caderninho, sem chute, sem desconto perdido.',
+  },
+  {
+    number: '02',
+    title: 'Reposição automática de aulas',
+    body: 'A vaga aberta pela falta entra na fila de reposição e quem precisa recebe convite com 24 horas para confirmar.',
+  },
+  {
+    number: '03',
+    title: 'Confirmação de presença proativa',
+    body: 'No dia anterior, a aluna decide “vou” ou “não vou” em um toque — a Débora vê o ateliê do dia já cheio ou aliviado.',
+  },
+  {
+    number: '04',
+    title: 'Comunidade moderada com IA',
+    body: 'O feed do ateliê é só das alunas: filtro automático sinaliza assuntos delicados, e nada de DM entre estranhas.',
+  },
+  {
+    number: '05',
+    title: 'Políticas no onboarding',
+    body: 'Reposição, faltas, cancelamento — tudo aceito no cadastro com data e hora, em conformidade com a LGPD.',
+  },
+];
+---
+
+<section class="vp section section--surface-mid" aria-labelledby="vp-title">
+  <div class="container vp__inner">
+    <header class="vp__head">
+      <span class="eyebrow">O que muda no dia a dia</span>
+      <h2 id="vp-title" class="section-title">
+        Construído para o ritmo de quem mexe com <em>barro</em>, não para o ritmo do software.
+      </h2>
+    </header>
+
+    <ol class="vp__list">
+      {
+        props.map((p) => (
+          <li class="vp__item">
+            <span class="vp__num">{p.number}</span>
+            <div class="vp__copy">
+              <h3 class="vp__title">{p.title}</h3>
+              <p class="vp__body">{p.body}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .vp__inner { display: grid; gap: clamp(2rem, 4vw, 3.5rem); }
+
+  .vp__head {
+    display: grid;
+    gap: var(--s-4);
+    max-width: 52rem;
+  }
+
+  .vp__head em {
+    font-style: italic;
+    color: var(--secondary);
+    font-weight: 500;
+  }
+
+  .vp__list {
+    display: grid;
+    gap: var(--s-4);
+  }
+
+  .vp__item {
+    display: grid;
+    grid-template-columns: clamp(3rem, 6vw, 5.5rem) 1fr;
+    gap: var(--s-6);
+    padding-block: var(--s-6);
+    border-bottom: 1px dashed rgba(133, 117, 104, 0.32);
+    align-items: start;
+  }
+
+  .vp__item:first-child { border-top: 1px dashed rgba(133, 117, 104, 0.32); }
+
+  .vp__num {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: var(--tracking-display);
+    color: var(--secondary);
+    line-height: 1;
+  }
+
+  .vp__copy { display: grid; gap: var(--s-3); }
+
+  .vp__title {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 1.6vw, 1.6rem);
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1.15;
+  }
+
+  .vp__body {
+    font-size: var(--fs-body-lg);
+    line-height: var(--lh-body);
+    color: var(--on-surface-muted);
+    max-width: 48rem;
+  }
+</style>

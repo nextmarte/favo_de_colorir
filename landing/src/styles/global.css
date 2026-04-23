@@ -1,0 +1,142 @@
+@import "./tokens.css";
+@import "./reset.css";
+
+html {
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--on-surface);
+  scroll-behavior: smooth;
+}
+
+body {
+  font-size: var(--fs-body);
+  letter-spacing: var(--tracking-normal);
+  background:
+    radial-gradient(1200px 600px at 8% -10%, rgba(199, 91, 57, 0.08), transparent 60%),
+    radial-gradient(900px 600px at 105% 10%, rgba(141, 75, 0, 0.07), transparent 65%),
+    var(--surface);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Selection */
+::selection {
+  background: var(--secondary);
+  color: var(--on-primary);
+}
+
+/* Container helper */
+.container {
+  width: 100%;
+  max-width: var(--max-content);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Eyebrow label — small caps tracked, used everywhere */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-family: var(--font-body);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--on-surface-muted);
+}
+
+.eyebrow::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: var(--on-surface-faint);
+}
+
+/* Display heading — Epilogue, tight tracked, dramatic */
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-tight);
+  color: var(--on-surface);
+}
+
+/* Section header */
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-snug);
+  font-size: var(--fs-h2);
+  color: var(--on-surface);
+}
+
+/* Body prose */
+.prose {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-body);
+  color: var(--on-surface-muted);
+  max-width: var(--max-prose);
+}
+
+/* Section spacing */
+.section {
+  padding-block: clamp(4rem, 8vw, 8rem);
+  position: relative;
+}
+
+.section--surface-low { background: var(--surface-low); }
+.section--surface-mid { background: var(--surface-mid); }
+.section--surface-deep { background: var(--surface-deep); }
+
+/* Decorative ink-stroke divider — terracotta brushstroke */
+.brushstroke {
+  display: block;
+  width: clamp(80px, 12vw, 160px);
+  height: 18px;
+  color: var(--secondary);
+}
+
+/* Page-load reveals */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.reveal {
+  opacity: 0;
+  animation: rise-in var(--d-slow) var(--ease-out) forwards;
+}
+
+/* Stagger utilities */
+.delay-1 { animation-delay: 80ms; }
+.delay-2 { animation-delay: 160ms; }
+.delay-3 { animation-delay: 240ms; }
+.delay-4 { animation-delay: 320ms; }
+.delay-5 { animation-delay: 400ms; }
+.delay-6 { animation-delay: 480ms; }
+
+/* Vertical text label — editorial sidebar */
+.vlabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-body);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--on-surface-faint);
+}

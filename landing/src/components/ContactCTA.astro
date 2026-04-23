@@ -1,0 +1,156 @@
+---
+import Button from './ui/Button.astro';
+---
+
+<section id="contato" class="contact section">
+  <div class="container contact__inner">
+    <div class="contact__copy">
+      <span class="eyebrow">Conversar</span>
+      <h2 class="section-title contact__title">
+        Mande uma mensagem,<br />
+        <em>responde uma pessoa.</em>
+      </h2>
+      <p class="prose">
+        Para conhecer planos, pedir uma visita ao ateliê ou tirar dúvidas sobre o app —
+        o canal mais rápido é o WhatsApp da Débora. Sem formulário, sem fila.
+      </p>
+    </div>
+
+    <aside class="contact__card" aria-labelledby="contact-card-title">
+      <p class="eyebrow contact__card-eyebrow">Para a Débora</p>
+      <h3 id="contact-card-title" class="contact__card-title">Quero conhecer o ateliê</h3>
+
+      <ul class="contact__channels">
+        <li>
+          <span class="contact__channel-label">WhatsApp</span>
+          <a href="https://wa.me/" class="contact__channel-value" data-todo="numero-real">+55 (21) — a confirmar</a>
+        </li>
+        <li>
+          <span class="contact__channel-label">Instagram</span>
+          <a href="https://instagram.com/favodecolorir" class="contact__channel-value" data-todo="handle-real">@favodecolorir</a>
+        </li>
+        <li>
+          <span class="contact__channel-label">E-mail</span>
+          <a href="mailto:contato@favodecolorir.com.br" class="contact__channel-value" data-todo="email-real">contato@favodecolorir.com.br</a>
+        </li>
+      </ul>
+
+      <div id="alunas" class="contact__alunas">
+        <p class="contact__alunas-label">Já é aluna do ateliê?</p>
+        <Button href="https://favodecolorir.com.br/app" variant="secondary">Baixar aplicativo</Button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<style>
+  .contact {
+    background:
+      linear-gradient(180deg, var(--surface) 0%, var(--surface-low) 100%);
+  }
+
+  .contact__inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+
+  @media (min-width: 880px) {
+    .contact__inner { grid-template-columns: 1.05fr 1fr; }
+  }
+
+  .contact__copy { display: grid; gap: var(--s-5); max-width: 36rem; }
+
+  .contact__title em {
+    font-style: italic;
+    color: var(--secondary);
+    font-weight: 500;
+  }
+
+  .contact__card {
+    background: var(--on-surface);
+    color: var(--surface);
+    border-radius: var(--r-card);
+    padding: clamp(2rem, 4vw, 2.75rem);
+    display: grid;
+    gap: var(--s-5);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact__card::before {
+    content: '';
+    position: absolute;
+    inset: -40% -10% auto auto;
+    width: 22rem;
+    height: 22rem;
+    background: radial-gradient(circle, rgba(199, 91, 57, 0.55), transparent 65%);
+    border-radius: 50%;
+    z-index: 0;
+  }
+
+  .contact__card > * { position: relative; z-index: 1; }
+
+  .contact__card-eyebrow {
+    color: rgba(255, 248, 244, 0.7);
+  }
+
+  .contact__card-eyebrow::before {
+    background: rgba(255, 248, 244, 0.4);
+  }
+
+  .contact__card-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 1.4rem + 1.2vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1.1;
+  }
+
+  .contact__channels {
+    display: grid;
+    gap: var(--s-4);
+    padding-block-start: var(--s-4);
+    border-top: 1px dashed rgba(255, 248, 244, 0.18);
+  }
+
+  .contact__channels li {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: var(--s-4);
+    align-items: baseline;
+  }
+
+  .contact__channel-label {
+    font-size: var(--fs-eyebrow);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: rgba(255, 248, 244, 0.6);
+  }
+
+  .contact__channel-value {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--surface);
+    border-bottom: 1px dashed rgba(255, 248, 244, 0.4);
+    transition: border-color var(--d-fast) var(--ease-out);
+  }
+
+  .contact__channel-value:hover { border-color: var(--secondary); }
+
+  .contact__alunas {
+    display: grid;
+    gap: var(--s-3);
+    padding-block-start: var(--s-4);
+    border-top: 1px dashed rgba(255, 248, 244, 0.18);
+  }
+
+  .contact__alunas-label {
+    font-size: var(--fs-eyebrow);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: rgba(255, 248, 244, 0.7);
+  }
+</style>

@@ -1,0 +1,60 @@
+name: Landing CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - '.github/workflows/landing-ci.yml'
+  pull_request:
+    paths:
+      - 'landing/**'
+      - '.github/workflows/landing-ci.yml'
+
+defaults:
+  run:
+    working-directory: landing
+
+jobs:
+  build-test:
+    name: Build, type-check, unit & E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Astro check (type-check)
+        run: npm run check
+
+      - name: Vitest
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright E2E (smoke)
+        run: npm run test:e2e
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: landing/playwright-report
+          retention-days: 7
