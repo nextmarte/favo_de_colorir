@@ -82,7 +82,9 @@ void main() {
       expect(src, isNot(contains("'Envie essas credenciais para a aluna.'")));
       expect(src, contains("hintText: 'Nome completo'"));
       expect(src, contains("label: const Text('Estudante')"));
-      expect(src, contains("Envie essas credenciais para a pessoa cadastrada."));
+      // Copy antiga ("pessoa cadastrada") foi substituída por fluxo de
+      // magic link — texto neutro usado agora é "por email" + "magic link".
+      expect(src, contains('Enviar acesso automaticamente por email'));
     });
 
     test('admin_users_screen usa "Estudante" como role label', () {

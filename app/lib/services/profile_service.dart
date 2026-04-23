@@ -131,6 +131,16 @@ class ProfileService {
     });
   }
 
+  /// Admin dispara email de boas-vindas com magic link pra nova aluna/aluno.
+  /// Retorna map com 'email' e 'magic_link'.
+  Future<Map<String, dynamic>> sendCredentialsByEmail(String userId) async {
+    final response = await _client.functions.invoke(
+      'enviar-credenciais',
+      body: {'user_id': userId},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
   /// Admin gera nova senha temporária. Retorna a senha gerada.
   Future<String> resetUserPassword(String userId) async {
     final response = await _client.functions.invoke(

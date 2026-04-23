@@ -212,6 +212,7 @@ class _AdminCreateUserScreenState
       if (!mounted) return;
 
       final password = result['password'] as String;
+      final newUserId = result['user_id'] as String;
 
       await showDialog(
         context: context,
@@ -238,17 +239,44 @@ class _AdminCreateUserScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Text(
-                'Envie essas credenciais para a pessoa cadastrada.',
+                'Enviar acesso automaticamente por email (magic link) ou copiar/colar na mão?',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
           actions: [
-            ElevatedButton(
+            TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK'),
+              child: const Text('Copiei na mão'),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.email_outlined, size: 16),
+              label: const Text('Enviar por email'),
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(profileServiceProvider)
+                      .sendCredentialsByEmail(newUserId);
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                  }
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Magic link enviado pro email.'),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Erro: $e')),
+                    );
+                  }
+                }
+              },
             ),
           ],
         ),
