@@ -226,6 +226,28 @@ class AgendaService {
     return result;
   }
 
+  /// Chamada: marca attendance_status de uma presença.
+  Future<void> markAttendance({
+    required String presencaId,
+    required AttendanceStatus status,
+  }) async {
+    await _client.from('presencas').update({
+      'attendance_status': Presenca.attendanceToString(status),
+      // manter 'attended' pra compatibilidade com views antigas
+      'attended': status == AttendanceStatus.attended ||
+          status == AttendanceStatus.late,
+    }).eq('id', presencaId);
+  }
+
+  /// Bulk: marca todas as presenças de uma aula como ausentes
+  /// (atalho: "todos faltaram" = feriado não previsto).
+  Future<void> markAllAbsent(String aulaId) async {
+    await _client.from('presencas').update({
+      'attendance_status': 'absent',
+      'attended': false,
+    }).eq('aula_id', aulaId);
+  }
+
   /// Matricular aluna em turma
   Future<void> enrollStudent(String turmaId, String studentId) async {
     await _client.from('turma_alunos').upsert({

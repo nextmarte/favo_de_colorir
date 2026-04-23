@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/error_handler.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/presenca.dart';
@@ -169,42 +170,10 @@ class _TurmaDayCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  ...aula.presencas.map((p) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor:
-                                  _confirmColor(p.presenca.confirmation)
-                                      .withAlpha(30),
-                              child: Icon(
-                                _confirmIcon(p.presenca.confirmation),
-                                size: 14,
-                                color:
-                                    _confirmColor(p.presenca.confirmation),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(p.studentName,
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_note, size: 20),
-                              color: FavoColors.primary,
-                              tooltip: 'Registrar materiais',
-                              onPressed: () {
-                                context.push('/materiais', extra: {
-                                  'aulaId': aula.aula.id,
-                                  'studentId': p.presenca.studentId,
-                                  'studentName': p.studentName,
-                                });
-                              },
-                            ),
-                          ],
-                        ),
+                  ...aula.presencas.map((p) => _AttendanceRow(
+                        aulaId: aula.aula.id,
+                        presenca: p.presenca,
+                        studentName: p.studentName,
                       )),
                 ],
               );
@@ -215,22 +184,158 @@ class _TurmaDayCard extends ConsumerWidget {
     );
   }
 
-  IconData _confirmIcon(ConfirmationStatus status) {
-    return switch (status) {
-      ConfirmationStatus.confirmed => Icons.check,
-      ConfirmationStatus.declined => Icons.close,
-      ConfirmationStatus.pending => Icons.hourglass_empty,
-      ConfirmationStatus.noResponse => Icons.remove,
-    };
+}
+
+class _AttendanceRow extends ConsumerStatefulWidget {
+  final String aulaId;
+  final Presenca presenca;
+  final String studentName;
+
+  const _AttendanceRow({
+    required this.aulaId,
+    required this.presenca,
+    required this.studentName,
+  });
+
+  @override
+  ConsumerState<_AttendanceRow> createState() => _AttendanceRowState();
+}
+
+class _AttendanceRowState extends ConsumerState<_AttendanceRow> {
+  late AttendanceStatus _status = widget.presenca.attendanceStatus;
+  bool _saving = false;
+
+  Future<void> _setStatus(AttendanceStatus newStatus) async {
+    if (_status == newStatus || _saving) return;
+    final previous = _status;
+    setState(() {
+      _status = newStatus;
+      _saving = true;
+    });
+    try {
+      await ref.read(agendaServiceProvider).markAttendance(
+            presencaId: widget.presenca.id,
+            status: newStatus,
+          );
+      if (mounted) {
+        ref.invalidate(turmaAulasDoDiaProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _status = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
-  Color _confirmColor(ConfirmationStatus status) {
-    return switch (status) {
-      ConfirmationStatus.confirmed => FavoColors.success,
-      ConfirmationStatus.declined => FavoColors.error,
-      ConfirmationStatus.pending => FavoColors.primary,
-      ConfirmationStatus.noResponse => FavoColors.outline,
-    };
+  @override
+  Widget build(BuildContext context) {
+    final didAttend = _status == AttendanceStatus.attended ||
+        _status == AttendanceStatus.late;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(widget.studentName,
+                style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          _AttendanceChip(
+            icon: Icons.check,
+            color: FavoColors.success,
+            label: 'P',
+            tooltip: 'Presente',
+            selected: _status == AttendanceStatus.attended,
+            onTap: () => _setStatus(AttendanceStatus.attended),
+          ),
+          const SizedBox(width: 6),
+          _AttendanceChip(
+            icon: Icons.schedule,
+            color: FavoColors.primary,
+            label: 'A',
+            tooltip: 'Atrasado(a)',
+            selected: _status == AttendanceStatus.late,
+            onTap: () => _setStatus(AttendanceStatus.late),
+          ),
+          const SizedBox(width: 6),
+          _AttendanceChip(
+            icon: Icons.close,
+            color: FavoColors.error,
+            label: 'F',
+            tooltip: 'Falta',
+            selected: _status == AttendanceStatus.absent,
+            onTap: () => _setStatus(AttendanceStatus.absent),
+          ),
+          const SizedBox(width: 6),
+          IconButton(
+            icon: const Icon(Icons.edit_note, size: 22),
+            color: didAttend ? FavoColors.primary : FavoColors.outline,
+            tooltip: didAttend
+                ? 'Registrar materiais'
+                : 'Marque presença antes de registrar materiais',
+            onPressed: didAttend
+                ? () {
+                    context.push('/materiais', extra: {
+                      'aulaId': widget.aulaId,
+                      'studentId': widget.presenca.studentId,
+                      'studentName': widget.studentName,
+                    });
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttendanceChip extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String tooltip;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AttendanceChip({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.tooltip,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: selected ? color : color.withAlpha(20),
+            shape: BoxShape.circle,
+            border: selected
+                ? Border.all(color: color, width: 2)
+                : null,
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: selected ? Colors.white : color,
+          ),
+        ),
+      ),
+    );
   }
 }
 
