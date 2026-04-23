@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/error_handler.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/presenca.dart';
 import '../../services/agenda_service.dart';
+import '../../services/profile_service.dart';
 
 class AulaDetailScreen extends ConsumerStatefulWidget {
   final String aulaId;
@@ -24,12 +26,25 @@ class _AulaDetailScreenState extends ConsumerState<AulaDetailScreen> {
   Widget build(BuildContext context) {
     final aulasAsync = ref.watch(myWeekAulasProvider);
 
+    final profileAsync = ref.watch(currentProfileProvider);
+    final profile = profileAsync.value;
+    final isAdminOrTeacher =
+        profile?.isAdmin == true || profile?.isTeacher == true;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          if (isAdminOrTeacher)
+            IconButton(
+              icon: const Icon(Icons.event_busy_outlined),
+              tooltip: 'Cancelar aula',
+              onPressed: () => _cancelAula(context, ref),
+            ),
+        ],
       ),
       body: aulasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -84,59 +99,92 @@ class _AulaDetailScreenState extends ConsumerState<AulaDetailScreen> {
                 ),
               ],
 
-              const SizedBox(height: 32),
-
-              // Status
-              Text('Sua presença',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-
-              if (confirmacao == ConfirmationStatus.confirmed)
-                _StatusBanner(
-                  icon: Icons.check_circle,
-                  color: FavoColors.success,
-                  text: 'Presença confirmada!',
-                )
-              else if (confirmacao == ConfirmationStatus.declined)
-                _StatusBanner(
-                  icon: Icons.cancel,
-                  color: FavoColors.error,
-                  text: 'Você informou que não vai.',
-                )
-              else
-                Text(
-                  'Confirme se você vai comparecer a esta aula.',
-                  style: Theme.of(context).textTheme.bodyLarge,
+              if (item.aula.isCancelled) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: FavoColors.error.withAlpha(30),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_busy,
+                          color: FavoColors.error, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Aula cancelada',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(color: FavoColors.error)),
+                            if (item.aula.cancellationReason != null)
+                              Text(item.aula.cancellationReason!,
+                                  style: Theme.of(context).textTheme.bodySmall),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ] else ...[
+                const SizedBox(height: 32),
 
-              const SizedBox(height: 20),
+                // Status
+                Text('Sua presença',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 16),
 
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed:
-                            _isLoading ? null : () => _confirm(false),
-                        child: const Text('Não Vou'),
+                if (confirmacao == ConfirmationStatus.confirmed)
+                  _StatusBanner(
+                    icon: Icons.check_circle,
+                    color: FavoColors.success,
+                    text: 'Presença confirmada!',
+                  )
+                else if (confirmacao == ConfirmationStatus.declined)
+                  _StatusBanner(
+                    icon: Icons.cancel,
+                    color: FavoColors.error,
+                    text: 'Você informou que não vai.',
+                  )
+                else
+                  Text(
+                    'Confirme se você vai comparecer a esta aula.',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+
+                const SizedBox(height: 20),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed:
+                              _isLoading ? null : () => _confirm(false),
+                          child: const Text('Não Vou'),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed:
-                            _isLoading ? null : () => _confirm(true),
-                        child: const Text('Vou!'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed:
+                              _isLoading ? null : () => _confirm(true),
+                          child: const Text('Vou!'),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
           );
         },
@@ -163,13 +211,63 @@ class _AulaDetailScreenState extends ConsumerState<AulaDetailScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
-      }
+      if (mounted) showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _cancelAula(BuildContext context, WidgetRef ref) async {
+    final reasonCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancelar esta aula?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                'Alunas/alunos serão notificados. Quem tinha confirmado ganha crédito de reposição.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              decoration: const InputDecoration(
+                hintText: 'Motivo (ex: feriado, imprevisto...)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Voltar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: FavoColors.error),
+            child: const Text('Cancelar aula'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      final result = await ref.read(agendaServiceProvider).cancelAula(
+            aulaId: widget.aulaId,
+            reason: reasonCtrl.text.trim(),
+          );
+      ref.invalidate(myWeekAulasProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Aula cancelada. ${result['credits_created']} crédito(s) de reposição criados, ${result['notified']} notificações enviadas.'),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) showErrorSnackBar(context, e);
     }
   }
 }

@@ -8,6 +8,9 @@ class Aula {
   final String endTime;
   final AulaStatus status;
   final String? notes;
+  final DateTime? cancelledAt;
+  final String? cancellationReason;
+  final String? cancelledBy;
   final DateTime createdAt;
 
   const Aula({
@@ -18,8 +21,13 @@ class Aula {
     required this.endTime,
     required this.status,
     this.notes,
+    this.cancelledAt,
+    this.cancellationReason,
+    this.cancelledBy,
     required this.createdAt,
   });
+
+  bool get isCancelled => status == AulaStatus.cancelled;
 
   factory Aula.fromJson(Map<String, dynamic> json) {
     return Aula(
@@ -30,6 +38,11 @@ class Aula {
       endTime: json['end_time'] as String,
       status: _parseStatus(json['status'] as String),
       notes: json['notes'] as String?,
+      cancelledAt: json['cancelled_at'] != null
+          ? DateTime.parse(json['cancelled_at'] as String)
+          : null,
+      cancellationReason: json['cancellation_reason'] as String?,
+      cancelledBy: json['cancelled_by'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

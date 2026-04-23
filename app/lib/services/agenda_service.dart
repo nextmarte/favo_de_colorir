@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../core/supabase_client.dart';
 import '../models/aula.dart';
@@ -23,8 +24,10 @@ final nextAulaProvider = FutureProvider<AulaWithTurma?>((ref) async {
   final now = DateTime.now();
   try {
     return aulas.firstWhere(
-      (a) => a.aula.scheduledDate.isAfter(now) ||
-          _isSameDay(a.aula.scheduledDate, now),
+      (a) =>
+          a.aula.status != AulaStatus.cancelled &&
+          (a.aula.scheduledDate.isAfter(now) ||
+              _isSameDay(a.aula.scheduledDate, now)),
     );
   } catch (_) {
     return null;
@@ -233,6 +236,97 @@ class AgendaService {
       result.add(AulaWithPresencas(aula: aula, presencas: presencas));
     }
     return result;
+  }
+
+  /// Cancela uma aula (por feriado, imprevisto, etc.).
+  ///
+  /// Cascata:
+  /// 1. aula.status = cancelled + cancelled_at + reason + cancelled_by
+  /// 2. presencas dessa aula: attendance_status = absent
+  /// 3. pra cada presença `confirmed`, cria reposição pending (crédito)
+  /// 4. registra em audit_logs
+  /// 5. cria notifications pra todos os alunos da aula
+  Future<Map<String, dynamic>> cancelAula({
+    required String aulaId,
+    required String reason,
+  }) async {
+    final actorId = SupabaseConfig.auth.currentUser?.id;
+
+    // 1. Marca aula como cancelada
+    await _client.from('aulas').update({
+      'status': 'cancelled',
+      'cancelled_at': DateTime.now().toIso8601String(),
+      'cancellation_reason': reason,
+      'cancelled_by': actorId,
+    }).eq('id', aulaId);
+
+    // 2. Busca presencas (precisa dos dados pra notificar e criar reposição)
+    final presencas = await _client
+        .from('presencas')
+        .select('id, student_id, confirmation')
+        .eq('aula_id', aulaId);
+
+    int creditsCreated = 0;
+    final monthYear = DateFormat('yyyy-MM').format(DateTime.now());
+    final notifications = <Map<String, dynamic>>[];
+
+    for (final p in presencas) {
+      // marca como absent
+      await _client.from('presencas').update({
+        'attendance_status': 'absent',
+      }).eq('id', p['id']);
+
+      final studentId = p['student_id'] as String;
+      final wasConfirmed = p['confirmation'] == 'confirmed';
+
+      if (wasConfirmed) {
+        // cria crédito de reposição pra quem tinha confirmado
+        try {
+          await _client.from('reposicoes').insert({
+            'student_id': studentId,
+            'original_aula_id': aulaId,
+            'month_year': monthYear,
+            'status': 'pending',
+            'admin_override': true,
+          });
+          creditsCreated++;
+        } catch (_) {}
+      }
+
+      notifications.add({
+        'user_id': studentId,
+        'title': 'Aula cancelada',
+        'body': reason.isEmpty
+            ? 'Uma aula foi cancelada. Confira sua agenda.'
+            : 'Aula cancelada: $reason',
+        'type': 'aula_cancelled',
+        'data': {'aula_id': aulaId},
+      });
+    }
+
+    if (notifications.isNotEmpty) {
+      await _client.from('notifications').insert(notifications);
+    }
+
+    // audit
+    try {
+      await _client.from('audit_logs').insert({
+        'actor_id': actorId,
+        'action': 'cancel_aula',
+        'resource_type': 'aula',
+        'resource_id': aulaId,
+        'changes': {
+          'reason': reason,
+          'credits_created': creditsCreated,
+          'notified': notifications.length,
+        },
+      });
+    } catch (_) {}
+
+    return {
+      'credits_created': creditsCreated,
+      'notified': notifications.length,
+    };
   }
 
   /// Chamada: marca attendance_status de uma presença.
