@@ -71,127 +71,97 @@ class CommunityFeedScreen extends ConsumerWidget {
   }
 
   Future<void> _newPost(BuildContext context, WidgetRef ref) async {
-    final ctrl = TextEditingController();
-    XFile? selectedImage;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Nova publicação'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: ctrl,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    hintText: 'Compartilhe algo com o ateliê...',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (selectedImage != null)
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: kIsWeb
-                            ? Image.network(selectedImage!.path,
-                                height: 120, width: double.infinity,
-                                fit: BoxFit.cover)
-                            : Image.file(File(selectedImage!.path),
-                                height: 120, width: double.infinity,
-                                fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 4, right: 4,
-                        child: GestureDetector(
-                          onTap: () => setState(() => selectedImage = null),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.black54, shape: BoxShape.circle),
-                            child: const Icon(Icons.close,
-                                size: 16, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picker = ImagePicker();
-                      final img = await picker.pickImage(
-                        source: ImageSource.gallery,
-                        maxWidth: 1200,
-                        imageQuality: 85,
-                      );
-                      if (img != null) setState(() => selectedImage = img);
-                    },
-                    icon: const Icon(Icons.photo, size: 18),
-                    label: const Text('Adicionar foto'),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Publicar'),
-            ),
-          ],
-        ),
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => const _NewPostScreen(),
       ),
     );
+    ref.invalidate(communityFeedProvider);
+  }
+}
 
-    if (result != true) return;
-    if (ctrl.text.trim().isEmpty && selectedImage == null) return;
+/// Tela fullscreen pra criar um post — substitui o AlertDialog apertado
+/// (que tinha preview quebrado no web por usar Image.network de blob url).
+class _NewPostScreen extends ConsumerStatefulWidget {
+  const _NewPostScreen();
 
-    // Indicador "moderando..."
-    if (!context.mounted) return;
+  @override
+  ConsumerState<_NewPostScreen> createState() => _NewPostScreenState();
+}
+
+class _NewPostScreenState extends ConsumerState<_NewPostScreen> {
+  final _ctrl = TextEditingController();
+  final List<XFile> _photos = [];
+  bool _publishing = false;
+
+  static const _maxChars = 500;
+  static const _maxPhotos = 4;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFromGallery() async {
+    final picker = ImagePicker();
+    final available = _maxPhotos - _photos.length;
+    if (available <= 0) return;
+    final imgs = await picker.pickMultiImage(
+      maxWidth: 1600,
+      imageQuality: 82,
+      limit: available,
+    );
+    if (imgs.isEmpty) return;
+    setState(() => _photos.addAll(imgs.take(available)));
+  }
+
+  Future<void> _pickFromCamera() async {
+    if (_photos.length >= _maxPhotos) return;
+    final picker = ImagePicker();
+    final img = await picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1600,
+      imageQuality: 82,
+    );
+    if (img == null) return;
+    setState(() => _photos.add(img));
+  }
+
+  Future<void> _publish() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty && _photos.isEmpty) return;
+    setState(() => _publishing = true);
+
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(
-      duration: Duration(seconds: 30),
-      content: Row(children: [
-        SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-                strokeWidth: 2, color: Colors.white)),
-        SizedBox(width: 12),
-        Text('Publicando e moderando...'),
-      ]),
-    ));
-
     try {
-      List<String>? imageUrls;
-      if (selectedImage != null) {
-        final bytes = kIsWeb ? await selectedImage!.readAsBytes() : null;
-        final url = await ref.read(communityServiceProvider).uploadPostPhoto(
-              filename: selectedImage!.name,
-              bytes: bytes,
-              file: kIsWeb ? null : File(selectedImage!.path),
-            );
-        imageUrls = [url];
+      final imageUrls = <String>[];
+      int failedUploads = 0;
+      for (final photo in _photos) {
+        try {
+          final bytes = kIsWeb ? await photo.readAsBytes() : null;
+          final url =
+              await ref.read(communityServiceProvider).uploadPostPhoto(
+                    filename: photo.name,
+                    bytes: bytes,
+                    file: kIsWeb ? null : File(photo.path),
+                  );
+          imageUrls.add(url);
+        } catch (_) {
+          failedUploads++;
+        }
       }
 
       final result = await ref.read(communityServiceProvider).createPost(
-            ctrl.text.trim().isNotEmpty ? ctrl.text.trim() : 'Foto',
-            imageUrls: imageUrls,
+            text.isNotEmpty ? text : 'Foto',
+            imageUrls: imageUrls.isEmpty ? null : imageUrls,
           );
-      ref.invalidate(communityFeedProvider);
 
-      messenger.hideCurrentSnackBar();
-      if (!context.mounted) return;
+      if (!mounted) return;
 
       if (!result.approved) {
-        await showDialog(
+        await showDialog<void>(
           context: context,
           builder: (_) => AlertDialog(
             title: const Text('Publicação não aprovada'),
@@ -204,15 +174,210 @@ class CommunityFeedScreen extends ConsumerWidget {
             ],
           ),
         );
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Publicação no ar!')),
-        );
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        return;
       }
+
+      Navigator.of(context).pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(failedUploads > 0
+              ? 'Publicação no ar — mas $failedUploads foto(s) falharam.'
+              : 'Publicação no ar!'),
+        ),
+      );
     } catch (e) {
-      messenger.hideCurrentSnackBar();
-      if (context.mounted) showErrorSnackBar(context, e);
+      if (mounted) {
+        setState(() => _publishing = false);
+        showErrorSnackBar(context, e);
+      }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit =
+        !_publishing && (_ctrl.text.trim().isNotEmpty || _photos.isNotEmpty);
+    final charCount = _ctrl.text.characters.length;
+    final canAddPhoto = _photos.length < _maxPhotos && !_publishing;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nova publicação'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: _publishing ? null : () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: ElevatedButton(
+              onPressed: canSubmit ? _publish : null,
+              child: _publishing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Publicar'),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  TextField(
+                    controller: _ctrl,
+                    maxLines: null,
+                    minLines: 4,
+                    maxLength: _maxChars,
+                    enabled: !_publishing,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Compartilhe algo com o ateliê…\n'
+                          'A peça que saiu hoje, uma dica, uma dúvida.',
+                      border: InputBorder.none,
+                      counterText: '$charCount/$_maxChars',
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  if (_photos.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _PhotoGrid(
+                      photos: _photos,
+                      onRemove: _publishing
+                          ? null
+                          : (i) => setState(() => _photos.removeAt(i)),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  if (_publishing)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: FavoColors.primaryContainer.withAlpha(40),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Publicando e passando pela moderação…',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                      color: FavoColors.outlineVariant.withAlpha(80)),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: canAddPhoto ? _pickFromGallery : null,
+                    icon: const Icon(Icons.photo_library_outlined),
+                    tooltip: 'Galeria',
+                  ),
+                  IconButton(
+                    onPressed: canAddPhoto ? _pickFromCamera : null,
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    tooltip: 'Câmera',
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_photos.length}/$_maxPhotos fotos',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: FavoColors.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoGrid extends StatelessWidget {
+  final List<XFile> photos;
+  final void Function(int)? onRemove;
+
+  const _PhotoGrid({required this.photos, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (_, i) {
+        final p = photos[i];
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: kIsWeb
+                    ? FutureBuilder<Uint8List>(
+                        future: p.readAsBytes(),
+                        builder: (_, snap) => snap.hasData
+                            ? Image.memory(snap.data!, fit: BoxFit.cover)
+                            : Container(color: FavoColors.surfaceContainerLow),
+                      )
+                    : Image.file(File(p.path), fit: BoxFit.cover),
+              ),
+            ),
+            if (onRemove != null)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: GestureDetector(
+                  onTap: () => onRemove!(i),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close,
+                        size: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
