@@ -66,11 +66,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Gera magic link (Supabase envia email automaticamente)
+    // Gera magic link com redirect direto pro deep link do app.
+    // Aluna clica no email → abre o app já autenticada.
     const { data: link, error: linkError } = await supabase.auth.admin
       .generateLink({
         type: "magiclink",
         email: targetProfile.email,
+        options: {
+          redirectTo: "favo://auth-callback",
+        },
       });
 
     if (linkError) {
