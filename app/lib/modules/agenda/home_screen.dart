@@ -320,6 +320,24 @@ class _NextAulaCard extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
+          if (item.turma.location != null &&
+              item.turma.location!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.place_outlined,
+                    size: 16, color: FavoColors.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    item.turma.location!,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [

@@ -1,5 +1,11 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/error_handler.dart';
 import '../../core/supabase_client.dart';
@@ -188,15 +194,33 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
         'exportar-cobranca',
         body: {'month_year': _selectedMonth, 'format': 'csv'},
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('CSV gerado (${(response.data as String).split('\n').length - 1} linhas)')),
+      final csv = response.data as String;
+      final linhas = csv.split('\n').length - 1;
+      final filename = 'cobrancas_$_selectedMonth.csv';
+
+      if (kIsWeb) {
+        // Web: copia pro clipboard como fallback simples
+        await Clipboard.setData(ClipboardData(text: csv));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('CSV copiado pra área de transferência ($linhas linhas).')),
+          );
+        }
+      } else {
+        // Mobile/desktop: salva em Documents e abre share sheet
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/$filename');
+        await file.writeAsString(csv);
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text:
+              'Cobranças $_selectedMonth · $linhas linhas · Favo de Colorir',
+          subject: filename,
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
-      }
+      if (mounted) showErrorSnackBar(context, e);
     }
   }
 }

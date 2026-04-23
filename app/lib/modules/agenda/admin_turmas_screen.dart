@@ -163,6 +163,8 @@ Future<void> showTurmaFormDialog(
   WidgetRef ref, {
   Turma? existing,
 }) async {
+  final locationCtrl = TextEditingController(text: existing?.location ?? '');
+  final addressCtrl = TextEditingController(text: existing?.address ?? '');
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     int capacity = existing?.capacity ?? 8;
     int? dayOfWeek = existing?.dayOfWeek;
@@ -238,6 +240,22 @@ Future<void> showTurmaFormDialog(
                       icon: const Icon(Icons.add),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: locationCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Sala / bancada (opcional)',
+                    hintText: 'Ex: Sala 2 · bancada azul',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: addressCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Endereço (opcional)',
+                    hintText: 'Ex: Rua Uruguai 200, Tijuca · RJ',
+                  ),
                 ),
               ],
             ),
@@ -320,6 +338,8 @@ Future<void> showTurmaFormDialog(
           'start_time': startStr,
           'end_time': endStr,
           'capacity': capacity,
+          'location': locationCtrl.text.trim().isEmpty ? null : locationCtrl.text.trim(),
+          'address': addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
         });
       } else {
         await ref.read(agendaServiceProvider).updateTurma(existing.id, {
@@ -328,6 +348,8 @@ Future<void> showTurmaFormDialog(
           'start_time': startStr,
           'end_time': endStr,
           'capacity': capacity,
+          'location': locationCtrl.text.trim().isEmpty ? null : locationCtrl.text.trim(),
+          'address': addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
         });
       }
 

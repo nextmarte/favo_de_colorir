@@ -70,7 +70,48 @@ class CommunityComment {
 class ModerationResult {
   final bool approved;
   final String? reason;
-  const ModerationResult({required this.approved, this.reason});
+  final String? category;
+  final String? blockedWord;
+  const ModerationResult({
+    required this.approved,
+    this.reason,
+    this.category,
+    this.blockedWord,
+  });
+
+  /// Mensagem amigável pra aluna entender por que o post não passou.
+  String get friendlyMessage {
+    final cat = category ?? '';
+    switch (cat) {
+      case 'political':
+      case 'politics':
+        return 'O Favo é um espaço pra ateliê, sem política. Que tal falar sobre sua peça, a argila, a queima?';
+      case 'hate':
+      case 'harassment':
+      case 'hate/threatening':
+        return 'O post tem palavras que podem ofender alguém. Reescreva com carinho.';
+      case 'violence':
+      case 'violence/graphic':
+        return 'Conteúdo violento não rola na comunidade. Tente outra forma de expressar.';
+      case 'sexual':
+      case 'sexual/minors':
+        return 'Conteúdo adulto não pode ser publicado na comunidade.';
+      case 'self-harm':
+      case 'self-harm/intent':
+      case 'self-harm/instructions':
+        return 'Se você tá passando por algo difícil, fale com alguém de confiança ou CVV 188. Aqui a gente não publica esse tipo de conteúdo, mas queremos você bem.';
+      case 'illicit':
+      case 'illicit/violent':
+        return 'Conteúdo ilícito não rola no app. Reescreva sem referências assim.';
+      case 'keyword':
+        return blockedWord != null
+            ? 'A palavra "$blockedWord" não rola aqui. Reescreva sem ela.'
+            : 'Tem palavra proibida no texto. Reescreva e tenta de novo.';
+      default:
+        return reason ??
+            'Sua publicação não passou pela moderação. Revise o texto e tenta de novo.';
+    }
+  }
 }
 
 class ChatConversation {
@@ -216,8 +257,13 @@ class CommunityService {
         body: {'post_id': postId, 'content': content},
       );
       final body = response.data as Map<String, dynamic>?;
-      final approved = (body?['approved'] as bool?) ?? true;
+      // Edge function retorna {flagged, reason, category, blocked_word}.
+      // Não-flagged = aprovado.
+      final flagged = (body?['flagged'] as bool?) ?? false;
+      final approved = !flagged;
       final reason = body?['reason'] as String?;
+      final category = body?['category'] as String?;
+      final blockedWord = body?['blocked_word'] as String?;
 
       await _client.from('community_posts').update({
         'moderation_status': approved ? 'approved' : 'rejected',
@@ -225,7 +271,12 @@ class CommunityService {
         'flag_reason': reason,
       }).eq('id', postId);
 
-      return ModerationResult(approved: approved, reason: reason);
+      return ModerationResult(
+        approved: approved,
+        reason: reason,
+        category: category,
+        blockedWord: blockedWord,
+      );
     } catch (_) {
       // Edge function caiu? Deixa passar (fail-open) pra não travar a pessoa.
       await _client.from('community_posts').update({

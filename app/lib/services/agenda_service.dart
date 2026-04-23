@@ -583,6 +583,35 @@ class AgendaService {
     }).eq('aula_id', aulaId);
   }
 
+  /// Batch attendance — permite marcar N alunas de uma vez em 1 round-trip.
+  /// Útil pra professora que marca presença de 8 pessoas em massa.
+  ///
+  /// [statuses] é um map presencaId → AttendanceStatus.
+  /// Supabase não tem UPSERT com valores diferentes por linha, então
+  /// agrupamos por status e fazemos uma query por bucket.
+  Future<void> markAttendanceBatch(
+      Map<String, AttendanceStatus> statuses) async {
+    if (statuses.isEmpty) return;
+
+    // Agrupa presencaIds por status
+    final byStatus = <AttendanceStatus, List<String>>{};
+    for (final entry in statuses.entries) {
+      byStatus.putIfAbsent(entry.value, () => []).add(entry.key);
+    }
+
+    for (final entry in byStatus.entries) {
+      final didAttend = entry.key == AttendanceStatus.attended ||
+          entry.key == AttendanceStatus.late;
+      await _client
+          .from('presencas')
+          .update({
+            'attendance_status': Presenca.attendanceToString(entry.key),
+            'attended': didAttend,
+          })
+          .inFilter('id', entry.value);
+    }
+  }
+
   /// Matricular aluna em turma
   Future<void> enrollStudent(String turmaId, String studentId) async {
     await _client.from('turma_alunos').upsert({

@@ -195,8 +195,7 @@ class CommunityFeedScreen extends ConsumerWidget {
           context: context,
           builder: (_) => AlertDialog(
             title: const Text('Publicação não aprovada'),
-            content: Text(result.reason ??
-                'Sua publicação não passou pela moderação. Revise e tente de novo.'),
+            content: Text(result.friendlyMessage),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),

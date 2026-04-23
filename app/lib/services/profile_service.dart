@@ -66,6 +66,27 @@ class ProfileService {
     return data.map((json) => Profile.fromJson(json)).toList();
   }
 
+  /// Busca paginada de perfis. Suporta busca por nome/email + filtro por papel
+  /// pra não carregar 80+ alunas de uma vez.
+  Future<List<Profile>> searchProfiles({
+    String query = '',
+    String? role,
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    var q = _client.from('profiles').select();
+    if (query.trim().isNotEmpty) {
+      final escaped = query.trim().replaceAll('%', '\\%');
+      q = q.or('full_name.ilike.%$escaped%,email.ilike.%$escaped%');
+    }
+    if (role != null && role != 'all') {
+      q = q.eq('role', role);
+    }
+    final data =
+        await q.order('full_name').range(offset, offset + limit - 1);
+    return data.map((json) => Profile.fromJson(json)).toList();
+  }
+
   Future<List<Profile>> getPendingProfiles() async {
     final data = await _client
         .from('profiles')

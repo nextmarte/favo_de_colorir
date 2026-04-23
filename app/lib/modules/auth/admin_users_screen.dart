@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,8 @@ import '../../core/theme.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../models/profile.dart';
 import '../../services/profile_service.dart';
+
+const _pageSize = 30;
 
 final allProfilesProvider = FutureProvider<List<Profile>>((ref) {
   return ref.read(profileServiceProvider).getAllProfiles();
@@ -23,17 +27,87 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   String _roleFilter = 'all';
   String _searchQuery = '';
   final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  Timer? _debounce;
+
+  List<Profile> _results = [];
+  int _offset = 0;
+  bool _loading = false;
+  bool _hasMore = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(() {
+      if (_scrollCtrl.position.pixels >=
+              _scrollCtrl.position.maxScrollExtent - 240 &&
+          !_loading &&
+          _hasMore) {
+        _loadMore();
+      }
+    });
+    _reload();
+  }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _reload() async {
+    setState(() {
+      _offset = 0;
+      _results = [];
+      _hasMore = true;
+      _loading = true;
+    });
+    await _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading && _offset > 0) return;
+    setState(() => _loading = true);
+    try {
+      final batch = await ref.read(profileServiceProvider).searchProfiles(
+            query: _searchQuery,
+            role: _roleFilter,
+            limit: _pageSize,
+            offset: _offset,
+          );
+      if (!mounted) return;
+      setState(() {
+        _results = [..._results, ...batch];
+        _offset += batch.length;
+        _hasMore = batch.length == _pageSize;
+        _loading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        showErrorSnackBar(context, e);
+      }
+    }
+  }
+
+  void _onSearchChanged(String v) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() => _searchQuery = v.trim());
+      _reload();
+    });
+  }
+
+  void _onRoleChanged(String v) {
+    setState(() => _roleFilter = v);
+    _reload();
   }
 
   @override
   Widget build(BuildContext context) {
-    final profilesAsync = ref.watch(allProfilesProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Gestão de Usuários')),
       body: Column(
@@ -51,15 +125,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: () {
                           _searchCtrl.clear();
-                          setState(() => _searchQuery = '');
+                          _onSearchChanged('');
                         },
                       ),
               ),
-              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              onChanged: _onSearchChanged,
             ),
           ),
           const SizedBox(height: 8),
-          // Filter chips
           SizedBox(
             height: 48,
             child: ListView(
@@ -75,51 +148,38 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             ),
           ),
           const SizedBox(height: 8),
-
           Expanded(
-            child: profilesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text(friendlyError(e))),
-              data: (profiles) {
-                var filtered = profiles;
-                if (_roleFilter != 'all') {
-                  filtered = filtered
-                      .where((p) => p.role.name == _roleFilter)
-                      .toList();
-                }
-                if (_searchQuery.isNotEmpty) {
-                  final q = _searchQuery.toLowerCase();
-                  filtered = filtered
-                      .where((p) =>
-                          p.fullName.toLowerCase().contains(q) ||
-                          p.email.toLowerCase().contains(q))
-                      .toList();
-                }
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        _searchQuery.isNotEmpty
-                            ? 'Nenhum resultado pra "$_searchQuery"'
-                            : 'Nenhum usuário',
+            child: _results.isEmpty && _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _results.isEmpty && !_loading
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            _searchQuery.isNotEmpty
+                                ? 'Nenhum resultado pra "$_searchQuery"'
+                                : 'Nenhum usuário',
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _reload,
+                        child: ListView.builder(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          itemCount: _results.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (_, i) {
+                            if (i >= _results.length) {
+                              return const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(
+                                    child: CircularProgressIndicator()),
+                              );
+                            }
+                            return _UserCard(profile: _results[i]);
+                          },
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => ref.refresh(allProfilesProvider.future),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) =>
-                        _UserCard(profile: filtered[index]),
-                  ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -133,7 +193,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       child: FilterChip(
         label: Text(label),
         selected: selected,
-        onSelected: (_) => setState(() => _roleFilter = value),
+        onSelected: (_) => _onRoleChanged(value),
       ),
     );
   }

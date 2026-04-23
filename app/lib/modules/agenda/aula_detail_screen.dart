@@ -85,6 +85,22 @@ class _AulaDetailScreenState extends ConsumerState<AulaDetailScreen> {
                 icon: Icons.people_outline,
                 text: 'Capacidade: ${item.turma.capacity} participantes',
               ),
+              if (item.turma.location != null &&
+                  item.turma.location!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _InfoRow(
+                  icon: Icons.place_outlined,
+                  text: item.turma.location!,
+                ),
+              ],
+              if (item.turma.address != null &&
+                  item.turma.address!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _InfoRow(
+                  icon: Icons.location_on_outlined,
+                  text: item.turma.address!,
+                ),
+              ],
 
               if (item.aula.notes != null) ...[
                 const SizedBox(height: 16),

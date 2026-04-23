@@ -13,6 +13,7 @@ import '../modules/auth/edit_profile_screen.dart';
 import '../modules/auth/notifications_screen.dart';
 import '../modules/auth/profile_screen.dart';
 import '../modules/auth/public_profile_screen.dart';
+import '../modules/auth/reset_password_screen.dart';
 import '../modules/onboarding/onboarding_screen.dart';
 import '../modules/agenda/home_screen.dart';
 import '../modules/agenda/my_agenda_screen.dart';
@@ -87,6 +88,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/auth/reset',
+        builder: (context, state) => ResetPasswordScreen(
+          token: state.uri.queryParameters['token'],
+        ),
       ),
 
       // App com bottom nav

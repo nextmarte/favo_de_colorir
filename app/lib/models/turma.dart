@@ -9,6 +9,8 @@ class Turma {
   final String endTime;
   final int capacity;
   final String? teacherId;
+  final String? location;
+  final String? address;
   final bool isActive;
   final DateTime createdAt;
 
@@ -21,6 +23,8 @@ class Turma {
     required this.endTime,
     required this.capacity,
     this.teacherId,
+    this.location,
+    this.address,
     required this.isActive,
     required this.createdAt,
   });
@@ -35,6 +39,8 @@ class Turma {
       endTime: json['end_time'] as String,
       capacity: json['capacity'] as int,
       teacherId: json['teacher_id'] as String?,
+      location: json['location'] as String?,
+      address: json['address'] as String?,
       isActive: json['is_active'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -49,6 +55,8 @@ class Turma {
       'end_time': endTime,
       'capacity': capacity,
       'teacher_id': teacherId,
+      'location': location,
+      'address': address,
       'is_active': isActive,
     };
   }
