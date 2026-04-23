@@ -38,6 +38,17 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    // Limpa qualquer sessão persistida anterior antes de autenticar.
+    // Sem isso, o supabase_flutter ocasionalmente deixa estado residual
+    // (especialmente em web + hot-reload) e `currentUser` responde com
+    // a conta anterior mesmo após troca de credencial.
+    if (_auth.currentUser != null) {
+      try {
+        await _auth.signOut(scope: SignOutScope.local);
+      } catch (_) {
+        // Sessão pode estar inválida — segue pro signIn normal.
+      }
+    }
     return _auth.signInWithPassword(
       email: email,
       password: password,
@@ -45,7 +56,9 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
+    // scope: local limpa só este device; global derrubaria logins
+    // simultâneos da mesma conta (ex: celular + web).
+    await _auth.signOut(scope: SignOutScope.local);
   }
 
   Future<void> resetPassword(String email) async {

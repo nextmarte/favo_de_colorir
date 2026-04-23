@@ -199,14 +199,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.signIn(
+      final response = await authService.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (!mounted) return;
 
-      final userId = authService.currentUser!.id;
+      // Usa o user da resposta (não currentUser global) pra evitar
+      // race em que getter retorna sessão anterior residual.
+      final userId = response.user?.id ?? authService.currentUser?.id;
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Não foi possível entrar. Tente sair e entrar de novo.')),
+        );
+        return;
+      }
+      // Invalida cache de profile de eventual sessão anterior
+      ref.invalidate(currentProfileProvider);
       final profileService = ref.read(profileServiceProvider);
       final profile = await profileService.getProfile(userId);
 
