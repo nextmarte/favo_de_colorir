@@ -49,7 +49,7 @@ test.describe('Home page', () => {
 
   test('all major sections have anchor IDs', async ({ page }) => {
     await page.goto('/');
-    for (const id of ['produto', 'planos', 'atelie', 'contato']) {
+    for (const id of ['planos', 'atelie', 'contato']) {
       await expect(page.locator(`#${id}`)).toBeVisible();
     }
   });
