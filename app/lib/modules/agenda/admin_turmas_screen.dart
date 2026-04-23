@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/error_handler.dart';
 import '../../core/theme.dart';
 import '../../models/turma.dart';
 import '../../services/agenda_service.dart';
@@ -36,7 +37,7 @@ class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.event_repeat),
             onPressed: _isGenerating ? null : _generateAulas,
-            tooltip: 'Gerar aulas (4 semanas)',
+            tooltip: 'Gerar aulas',
           ),
         ],
       ),
@@ -81,21 +82,77 @@ class _AdminTurmasScreenState extends ConsumerState<AdminTurmasScreen> {
   }
 
   Future<void> _generateAulas() async {
+    int weeks = 4;
+    bool skipHolidays = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Gerar aulas'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Quantas semanas gerar?'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                children: [4, 8, 12, 26].map((n) {
+                  return ChoiceChip(
+                    label: Text('$n'),
+                    selected: weeks == n,
+                    onSelected: (_) => setState(() => weeks = n),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Pular feriados cadastrados'),
+                value: skipHolidays,
+                onChanged: (v) => setState(() => skipHolidays = v ?? true),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Gestão de feriados em Admin → Feriados.',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Gerar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
     setState(() => _isGenerating = true);
     try {
-      final result =
-          await ref.read(agendaServiceProvider).generateAulas(weeksAhead: 4);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${result['created']} aulas geradas!')),
-        );
-      }
+      final result = await ref.read(agendaServiceProvider).generateAulas(
+            weeksAhead: weeks,
+            skipHolidays: skipHolidays,
+          );
+      if (!mounted) return;
+      final created = result['created'] ?? 0;
+      final skippedHoliday = result['skipped_holiday'] ?? 0;
+      final skippedExisting = result['skipped_existing'] ?? 0;
+      final parts = <String>['$created aulas geradas'];
+      if (skippedHoliday > 0) parts.add('$skippedHoliday pulados (feriado)');
+      if (skippedExisting > 0) parts.add('$skippedExisting já existiam');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(parts.join(' · '))),
+      );
+      ref.invalidate(allTurmasProvider);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
-      }
+      if (mounted) showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }

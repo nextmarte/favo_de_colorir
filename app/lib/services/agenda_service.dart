@@ -285,10 +285,16 @@ class AgendaService {
   }
 
   /// Gerar aulas recorrentes (chama edge function)
-  Future<Map<String, dynamic>> generateAulas({int weeksAhead = 4}) async {
+  Future<Map<String, dynamic>> generateAulas({
+    int weeksAhead = 4,
+    bool skipHolidays = true,
+  }) async {
     final response = await _client.functions.invoke(
       'gerar-aulas',
-      body: {'weeks_ahead': weeksAhead},
+      body: {
+        'weeks_ahead': weeksAhead,
+        'skip_holidays': skipHolidays,
+      },
     );
     return response.data as Map<String, dynamic>;
   }

@@ -24,6 +24,7 @@ import '../modules/admin/admin_config_screen.dart';
 import '../modules/admin/admin_notifications_screen.dart';
 import '../modules/admin/admin_policies_screen.dart';
 import '../modules/admin/audit_log_screen.dart';
+import '../modules/admin/feriados_screen.dart';
 import '../modules/cobranca/admin_billing_screen.dart';
 import '../modules/comunidade/chat_detail_screen.dart';
 import '../modules/comunidade/chat_list_screen.dart';
@@ -210,6 +211,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/audit',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AuditLogScreen(),
+      ),
+      GoRoute(
+        path: '/admin/feriados',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const FeriadosScreen(),
       ),
       GoRoute(
         path: '/admin/notifications',

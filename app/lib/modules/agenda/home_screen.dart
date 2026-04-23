@@ -234,6 +234,11 @@ class HomeScreen extends ConsumerWidget {
           label: 'Auditoria',
           onTap: () => context.push('/admin/audit'),
         ),
+        _AdminCard(
+          icon: Icons.event_busy,
+          label: 'Feriados',
+          onTap: () => context.push('/admin/feriados'),
+        ),
       ],
     );
   }
