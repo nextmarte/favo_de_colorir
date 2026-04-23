@@ -96,86 +96,65 @@ class PresencaWithProfile {
 class AgendaService {
   final _client = SupabaseConfig.client;
 
-  /// Busca aulas da semana do aluno (via turma_alunos)
+  /// Busca aulas da semana do usuário logado, respeitando o papel:
+  /// - student: aulas das turmas onde está matriculada
+  /// - teacher: aulas das turmas onde é professora (teacher_id)
+  /// - admin/assistant: TODAS as aulas
   Future<List<AulaWithTurma>> getMyWeekAulas(String userId) async {
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
-
-    // Buscar turmas do aluno
-    final enrollments = await _client
-        .from('turma_alunos')
-        .select('turma_id')
-        .eq('student_id', userId)
-        .eq('status', 'active');
-
-    if (enrollments.isEmpty) return [];
-
-    final turmaIds =
-        enrollments.map((e) => e['turma_id'] as String).toList();
-
-    // Buscar aulas dessas turmas na semana
-    final aulasData = await _client
-        .from('aulas')
-        .select('*, turmas(*)')
-        .inFilter('turma_id', turmaIds)
-        .gte('scheduled_date', startOfWeek.toIso8601String().split('T').first)
-        .lte('scheduled_date', endOfWeek.toIso8601String().split('T').first)
-        .order('scheduled_date')
-        .order('start_time');
-
-    // Buscar presenças do aluno para essas aulas
-    final aulaIds =
-        aulasData.map((a) => a['id'] as String).toList();
-
-    List<Map<String, dynamic>> presencasData = [];
-    if (aulaIds.isNotEmpty) {
-      presencasData = await _client
-          .from('presencas')
-          .select()
-          .eq('student_id', userId)
-          .inFilter('aula_id', aulaIds);
-    }
-
-    final presencasByAula = <String, Presenca>{};
-    for (final p in presencasData) {
-      presencasByAula[p['aula_id'] as String] = Presenca.fromJson(p);
-    }
-
-    return aulasData.map((data) {
-      final aula = Aula.fromJson(data);
-      final turma = Turma.fromJson(data['turmas'] as Map<String, dynamic>);
-      return AulaWithTurma(
-        aula: aula,
-        turma: turma,
-        minhaPresenca: presencasByAula[aula.id],
-      );
-    }).toList();
+    return _getAulasForUserInRange(userId, startOfWeek, endOfWeek);
   }
 
-  /// Aulas da aluna logada num intervalo arbitrário (usado pra month view).
-  Future<List<AulaWithTurma>> getAulasInRange(
-      DateTime start, DateTime end) async {
-    final userId = SupabaseConfig.auth.currentUser?.id;
-    if (userId == null) return [];
+  /// Descobre quais turmas o usuário enxerga baseado no role.
+  /// Retorna null se o role vê tudo (admin/assistant).
+  Future<List<String>?> _turmasVisiveisPara(String userId) async {
+    final profile = await _client
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+    final role = profile?['role'] as String?;
 
+    if (role == 'admin' || role == 'assistant') {
+      return null; // vê tudo
+    }
+
+    if (role == 'teacher') {
+      final turmas = await _client
+          .from('turmas')
+          .select('id')
+          .eq('teacher_id', userId)
+          .eq('is_active', true);
+      return turmas.map((e) => e['id'] as String).toList();
+    }
+
+    // student (default)
     final enrollments = await _client
         .from('turma_alunos')
         .select('turma_id')
         .eq('student_id', userId)
         .eq('status', 'active');
-    if (enrollments.isEmpty) return [];
-    final turmaIds =
-        enrollments.map((e) => e['turma_id'] as String).toList();
+    return enrollments.map((e) => e['turma_id'] as String).toList();
+  }
 
-    final aulasData = await _client
+  Future<List<AulaWithTurma>> _getAulasForUserInRange(
+      String userId, DateTime start, DateTime end) async {
+    final turmaIds = await _turmasVisiveisPara(userId);
+    if (turmaIds != null && turmaIds.isEmpty) return [];
+
+    var query = _client
         .from('aulas')
         .select('*, turmas(*)')
-        .inFilter('turma_id', turmaIds)
         .gte('scheduled_date', start.toIso8601String().split('T').first)
-        .lte('scheduled_date', end.toIso8601String().split('T').first)
-        .order('scheduled_date')
-        .order('start_time');
+        .lte('scheduled_date', end.toIso8601String().split('T').first);
+
+    if (turmaIds != null) {
+      query = query.inFilter('turma_id', turmaIds);
+    }
+
+    final aulasData = await query.order('scheduled_date').order('start_time');
 
     final aulaIds = aulasData.map((a) => a['id'] as String).toList();
     List<Map<String, dynamic>> presencasData = [];
@@ -201,6 +180,18 @@ class AgendaService {
         minhaPresenca: presencasByAula[aula.id],
       );
     }).toList();
+  }
+
+  /// Aulas do usuário logado num intervalo arbitrário (usado pra month
+  /// view do calendário). Respeita o role:
+  /// - student: aulas das turmas onde está matriculada
+  /// - teacher: aulas das turmas que leciona
+  /// - admin/assistant: todas as aulas
+  Future<List<AulaWithTurma>> getAulasInRange(
+      DateTime start, DateTime end) async {
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId == null) return [];
+    return _getAulasForUserInRange(userId, start, end);
   }
 
   /// Confirmar presença ("Vou")

@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../models/aula.dart';
 import '../../models/presenca.dart';
 import '../../services/agenda_service.dart';
+import '../../services/profile_service.dart';
 
 enum _ViewMode { week, month }
 
@@ -25,6 +26,17 @@ class _MyAgendaScreenState extends ConsumerState<MyAgendaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profile = ref.watch(currentProfileProvider).value;
+    final isStaff = profile != null &&
+        (profile.isAdmin || profile.isTeacher ||
+            profile.role.name == 'assistant');
+    final title = isStaff ? 'Agenda do Ateliê' : 'Minha Agenda';
+    final subtitle = _mode == _ViewMode.week
+        ? (isStaff
+            ? 'Todas as aulas da semana.'
+            : 'Seu tempo de criação nesta semana.')
+        : DateFormat('MMMM yyyy', 'pt_BR').format(_focusedMonth);
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -39,14 +51,11 @@ class _MyAgendaScreenState extends ConsumerState<MyAgendaScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Minha Agenda',
+                        Text(title,
                             style: Theme.of(context).textTheme.headlineLarge),
                         const SizedBox(height: 4),
                         Text(
-                          _mode == _ViewMode.week
-                              ? 'Seu tempo de criação nesta semana.'
-                              : DateFormat('MMMM yyyy', 'pt_BR')
-                                  .format(_focusedMonth),
+                          subtitle,
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ],
