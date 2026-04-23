@@ -264,4 +264,79 @@ class RepositionService {
       'status': 'active',
     });
   }
+
+  /// Lista todas as turmas cheias que a aluna NÃO está matriculada nem
+  /// já na fila. Usado em `WaitlistScreen` pra mostrar opções de entrar.
+  Future<List<Map<String, dynamic>>> getFullTurmas(String studentId) async {
+    final all = await _client
+        .from('turmas')
+        .select('*, turma_alunos(count), lista_espera(count)')
+        .eq('is_active', true);
+
+    final enrolled = await _client
+        .from('turma_alunos')
+        .select('turma_id')
+        .eq('student_id', studentId)
+        .eq('status', 'active');
+    final enrolledIds =
+        enrolled.map((e) => e['turma_id'] as String).toSet();
+
+    final waitlisted = await _client
+        .from('lista_espera')
+        .select('turma_id')
+        .eq('student_id', studentId)
+        .inFilter('status', ['waiting', 'notified']);
+    final waitlistedIds =
+        waitlisted.map((e) => e['turma_id'] as String).toSet();
+
+    final full = <Map<String, dynamic>>[];
+    for (final t in all) {
+      final id = t['id'] as String;
+      if (enrolledIds.contains(id) || waitlistedIds.contains(id)) continue;
+      final capacity = (t['capacity'] as num).toInt();
+      final enrolledCount = _countNested(t['turma_alunos']);
+      if (enrolledCount >= capacity) {
+        full.add(t);
+      }
+    }
+    return full;
+  }
+
+  /// Minha posição em listas de espera (pra aluna).
+  Future<List<Map<String, dynamic>>> getMyWaitlist(String studentId) async {
+    return await _client
+        .from('lista_espera')
+        .select('*, turmas:turma_id(name, day_of_week, start_time)')
+        .eq('student_id', studentId)
+        .inFilter('status', ['waiting', 'notified'])
+        .order('created_at');
+  }
+
+  /// Admin/teacher vê a fila completa de uma turma.
+  Future<List<Map<String, dynamic>>> getWaitlistForTurma(String turmaId) async {
+    return await _client
+        .from('lista_espera')
+        .select('*, profiles:student_id(full_name, email, avatar_url)')
+        .eq('turma_id', turmaId)
+        .order('position');
+  }
+
+  /// Aluna sai da fila.
+  Future<void> leaveWaitlist(String waitlistId) async {
+    await _client
+        .from('lista_espera')
+        .update({'status': 'cancelled'})
+        .eq('id', waitlistId);
+  }
+
+  int _countNested(dynamic data) {
+    if (data is List && data.isNotEmpty) {
+      final first = data.first;
+      if (first is Map && first.containsKey('count')) {
+        return (first['count'] as num).toInt();
+      }
+      return data.length;
+    }
+    return 0;
+  }
 }

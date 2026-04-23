@@ -20,6 +20,7 @@ import '../modules/agenda/teacher_dashboard_screen.dart';
 import '../modules/agenda/admin_turmas_screen.dart';
 import '../modules/agenda/reposition_screen.dart';
 import '../modules/agenda/turma_detail_screen.dart';
+import '../modules/agenda/waitlist_screen.dart';
 import '../modules/admin/admin_config_screen.dart';
 import '../modules/admin/admin_notifications_screen.dart';
 import '../modules/admin/admin_policies_screen.dart';
@@ -243,6 +244,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return TurmaDetailScreen(
+            turmaId: extra['turmaId'] as String,
+            turmaName: extra['turmaName'] as String,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/waitlist',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const WaitlistScreen(),
+      ),
+      GoRoute(
+        path: '/admin/turma-waitlist',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return AdminWaitlistScreen(
             turmaId: extra['turmaId'] as String,
             turmaName: extra['turmaName'] as String,
           );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/supabase_client.dart';
@@ -19,6 +20,13 @@ class RepositionScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Repor Aula'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              tooltip: 'Lista de espera',
+              onPressed: () => context.push('/waitlist'),
+            ),
+          ],
           bottom: TabBar(
             labelColor: FavoColors.primary,
             unselectedLabelColor: FavoColors.onSurfaceVariant,

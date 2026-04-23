@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../models/profile.dart';
@@ -56,6 +57,14 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
       appBar: AppBar(
         title: Text(widget.turmaName),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.people_alt_outlined),
+            tooltip: 'Fila de espera',
+            onPressed: () => context.push('/admin/turma-waitlist', extra: {
+              'turmaId': widget.turmaId,
+              'turmaName': widget.turmaName,
+            }),
+          ),
           IconButton(
             icon: const Icon(Icons.person_add),
             onPressed: _addStudent,
