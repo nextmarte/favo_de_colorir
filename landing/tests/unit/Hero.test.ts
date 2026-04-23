@@ -32,4 +32,22 @@ describe('Hero section', () => {
 
     expect(html).toMatch(/Tijuca/i);
   });
+
+  it('speaks to prospective students, not atelier owners', async () => {
+    const container = await AstroContainer.create();
+    const html = await container.renderToString(Hero);
+
+    // The page must NOT pitch the app to atelier owners ("your studio", "your students")
+    expect(html).not.toMatch(/seu ateliê/i);
+    expect(html).not.toMatch(/suas alunas/i);
+    // And must NOT default-feminize the audience
+    expect(html).not.toMatch(/celular das alunas/i);
+  });
+
+  it('shows the founding year in the hero stats', async () => {
+    const container = await AstroContainer.create();
+    const html = await container.renderToString(Hero);
+
+    expect(html).toContain('2018');
+  });
 });

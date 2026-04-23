@@ -2,48 +2,36 @@
 import Card from './ui/Card.astro';
 
 interface Feature {
-  area: string;
   title: string;
   body: string;
-  icon: 'agenda' | 'materiais' | 'cobranca' | 'feed' | 'comunidade' | 'estoque';
+  icon: 'agenda' | 'materiais' | 'cobranca' | 'feed' | 'comunidade';
 }
 
 const features: Feature[] = [
   {
-    area: 'M2',
-    title: 'Agenda viva',
-    body: 'Calendário semanal com confirmação em um toque, lista de espera e reposição liberada em tempo real.',
+    title: 'Sua agenda, semana a semana',
+    body: 'Calendário da turma, reposição em tempo real, confirmação num toque.',
     icon: 'agenda',
   },
   {
-    area: 'M3',
-    title: 'Materiais sem dor',
-    body: 'Argila em quilos, peças em queimas, devolução, tudo registrado em menos de dois minutos por turma.',
+    title: 'Materiais da sua aula',
+    body: 'Quilos de argila, peças em queima, devolução — tudo registrado pela Débora, visível pra você.',
     icon: 'materiais',
   },
   {
-    area: 'M4',
-    title: 'Cobrança automática',
-    body: 'Mensalidade + argila + queima de esmalte totalizadas no primeiro dia útil, com Pix nativo.',
+    title: 'Extrato claro, Pix no app',
+    body: 'Mensalidade, argila e queima totalizadas no primeiro dia útil. Paga direto no app, sem boleto escondido.',
     icon: 'cobranca',
   },
   {
-    area: 'M5',
-    title: 'Feed pessoal',
-    body: 'Cada peça vira página: foto, anotação, etapa. O caderno de jornada que cabe no bolso.',
+    title: 'O caderno das suas peças',
+    body: 'Cada peça é uma página: foto, anotação, etapa. Para lembrar do processo, não só do resultado.',
     icon: 'feed',
   },
   {
-    area: 'M6',
-    title: 'Comunidade do ateliê',
-    body: 'Posts, curtidas, comentários, chat com a professora — sem DM entre alunas, sem ruído externo.',
+    title: 'A comunidade do ateliê',
+    body: 'Posts, curtidas, chat com a professora. Sem DM entre quem não se conhece, sem ruído externo.',
     icon: 'comunidade',
-  },
-  {
-    area: 'M7',
-    title: 'Estoque em vista',
-    body: 'Cada quilo usado dá baixa automática. Alerta antes de faltar, não depois.',
-    icon: 'estoque',
   },
 ];
 
@@ -59,16 +47,14 @@ const icons: Record<Feature['icon'], string> = {
     'M4 5h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V5zm0 0h16M8 9h6m-6 4h8m-8 4h5',
   comunidade:
     'M3 12a8 8 0 0 1 14.93-4M21 12a8 8 0 0 1-14.93 4M8 9l-4 1 1-4M16 15l4-1-1 4',
-  estoque:
-    'M4 7l8-4 8 4v10l-8 4-8-4V7zm8-4v18M4 7l8 4 8-4',
 };
 ---
 
 <section id="produto" class="features section">
   <div class="container">
     <header class="features__head">
-      <span class="eyebrow">O aplicativo, módulo a módulo</span>
-      <h2 class="section-title">Sete módulos que cobrem o ateliê inteiro — sem precisar de mais um app.</h2>
+      <span class="eyebrow">O que o app faz por você</span>
+      <h2 class="section-title">O app do Favo, do seu lado em cada etapa no ateliê.</h2>
     </header>
 
     <ul class="features__grid">
@@ -77,7 +63,6 @@ const icons: Record<Feature['icon'], string> = {
           <li>
             <Card tone="paper" class="feature">
               <header class="feature__head">
-                <span class="feature__area">{f.area}</span>
                 <span class="feature__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
                     <path d={icons[f.icon]} />
@@ -117,16 +102,7 @@ const icons: Record<Feature['icon'], string> = {
   .feature__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--s-3);
-  }
-
-  .feature__area {
-    font-family: var(--font-display);
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: var(--tracking-eyebrow);
-    color: var(--on-surface-faint);
   }
 
   .feature__icon {
