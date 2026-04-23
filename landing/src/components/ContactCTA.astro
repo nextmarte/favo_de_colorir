@@ -1,4 +1,6 @@
 ---
+const mapQuery = encodeURIComponent('Rua São Francisco Xavier, 32, Tijuca, Rio de Janeiro, RJ');
+const mapEmbedUrl = `https://www.google.com/maps?q=${mapQuery}&output=embed`;
 ---
 
 <section id="contato" class="contact section">
@@ -14,6 +16,22 @@
         dúvida — chama a Débora no WhatsApp. Sem formulário, sem fila, sem
         robô: é ela mesma que responde.
       </p>
+
+      <div class="contact__map">
+        <iframe
+          src={mapEmbedUrl}
+          width="100%"
+          height="240"
+          style="border:0; border-radius: var(--r-card);"
+          allowfullscreen
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Localização do ateliê Favo de Colorir"
+        ></iframe>
+        <p class="contact__address">
+          <strong>Rua São Francisco Xavier, 32</strong> — Tijuca, Rio de Janeiro, RJ
+        </p>
+      </div>
     </div>
 
     <aside class="contact__card" aria-labelledby="contact-card-title">
@@ -97,6 +115,24 @@
   }
 
   .contact__copy { display: grid; gap: var(--s-5); max-width: 36rem; }
+
+  .contact__map {
+    display: grid;
+    gap: var(--s-3);
+    margin-block-start: var(--s-2);
+  }
+
+  .contact__map iframe {
+    width: 100%;
+    min-height: 220px;
+    border-radius: var(--r-card);
+  }
+
+  .contact__address {
+    font-size: 0.95rem;
+    color: var(--on-surface-muted);
+    line-height: 1.4;
+  }
 
   .contact__title em {
     font-style: italic;
