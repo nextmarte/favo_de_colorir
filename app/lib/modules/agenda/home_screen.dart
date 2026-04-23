@@ -120,8 +120,8 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _ActionChip(
-                      icon: Icons.history,
-                      label: 'Histórico',
+                      icon: Icons.photo_library_outlined,
+                      label: 'Meu feed',
                       onTap: () => context.go('/feed'),
                     ),
                   ),

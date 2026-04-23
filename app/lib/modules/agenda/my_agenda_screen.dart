@@ -44,8 +44,9 @@ class MyAgendaScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: 7,
                 itemBuilder: (context, index) {
+                  // Semana começa na segunda. weekday: 1=seg..7=dom
                   final day = now
-                      .subtract(Duration(days: now.weekday % 7))
+                      .subtract(Duration(days: now.weekday - 1))
                       .add(Duration(days: index));
                   final isToday = day.day == now.day &&
                       day.month == now.month &&
@@ -128,7 +129,7 @@ class MyAgendaScreen extends ConsumerWidget {
                     child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       children: [
-                        Text('Aulas do Dia',
+                        Text('Esta semana',
                             style:
                                 Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 12),
