@@ -45,6 +45,15 @@ final turmaAulasDoDiaProvider =
   return ref.read(agendaServiceProvider).getAulasDoDia(turmaId);
 });
 
+/// Aulas da aluna num mês específico (yyyy-MM).
+final monthAulasProvider = FutureProvider.family
+    .autoDispose<List<AulaWithTurma>, ({int year, int month})>(
+        (ref, key) async {
+  final start = DateTime(key.year, key.month, 1);
+  final end = DateTime(key.year, key.month + 1, 0); // último dia
+  return ref.read(agendaServiceProvider).getAulasInRange(start, end);
+});
+
 bool _isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
@@ -136,6 +145,56 @@ class AgendaService {
     return aulasData.map((data) {
       final aula = Aula.fromJson(data);
       final turma = Turma.fromJson(data['turmas'] as Map<String, dynamic>);
+      return AulaWithTurma(
+        aula: aula,
+        turma: turma,
+        minhaPresenca: presencasByAula[aula.id],
+      );
+    }).toList();
+  }
+
+  /// Aulas da aluna logada num intervalo arbitrário (usado pra month view).
+  Future<List<AulaWithTurma>> getAulasInRange(
+      DateTime start, DateTime end) async {
+    final userId = SupabaseConfig.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final enrollments = await _client
+        .from('turma_alunos')
+        .select('turma_id')
+        .eq('student_id', userId)
+        .eq('status', 'active');
+    if (enrollments.isEmpty) return [];
+    final turmaIds =
+        enrollments.map((e) => e['turma_id'] as String).toList();
+
+    final aulasData = await _client
+        .from('aulas')
+        .select('*, turmas(*)')
+        .inFilter('turma_id', turmaIds)
+        .gte('scheduled_date', start.toIso8601String().split('T').first)
+        .lte('scheduled_date', end.toIso8601String().split('T').first)
+        .order('scheduled_date')
+        .order('start_time');
+
+    final aulaIds = aulasData.map((a) => a['id'] as String).toList();
+    List<Map<String, dynamic>> presencasData = [];
+    if (aulaIds.isNotEmpty) {
+      presencasData = await _client
+          .from('presencas')
+          .select()
+          .eq('student_id', userId)
+          .inFilter('aula_id', aulaIds);
+    }
+    final presencasByAula = <String, Presenca>{};
+    for (final p in presencasData) {
+      presencasByAula[p['aula_id'] as String] = Presenca.fromJson(p);
+    }
+
+    return aulasData.map((data) {
+      final aula = Aula.fromJson(data);
+      final turma =
+          Turma.fromJson(data['turmas'] as Map<String, dynamic>);
       return AulaWithTurma(
         aula: aula,
         turma: turma,
