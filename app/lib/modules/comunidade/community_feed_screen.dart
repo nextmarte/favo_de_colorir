@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/error_handler.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../services/community_service.dart';
 
 class CommunityFeedScreen extends ConsumerWidget {
@@ -239,23 +240,10 @@ class _PostCard extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             child: Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  avatarUrl: post.authorAvatar,
+                  name: post.authorName,
                   radius: 18,
-                  backgroundColor: FavoColors.primaryContainer.withAlpha(40),
-                  backgroundImage: post.authorAvatar != null
-                      ? NetworkImage(post.authorAvatar!)
-                      : null,
-                  child: post.authorAvatar == null
-                      ? Text(
-                          post.authorName.isNotEmpty
-                              ? post.authorName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                              color: FavoColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14),
-                        )
-                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -598,23 +586,10 @@ class _CommentTile extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () => context.push('/profile/${c.authorId}'),
-            child: CircleAvatar(
+            child: UserAvatar(
+              avatarUrl: c.authorAvatar,
+              name: c.authorName,
               radius: 16,
-              backgroundColor: FavoColors.primaryContainer.withAlpha(40),
-              backgroundImage: c.authorAvatar != null
-                  ? NetworkImage(c.authorAvatar!)
-                  : null,
-              child: c.authorAvatar == null
-                  ? Text(
-                      c.authorName.isNotEmpty
-                          ? c.authorName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                          fontSize: 12,
-                          color: FavoColors.primary,
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
             ),
           ),
           const SizedBox(width: 10),

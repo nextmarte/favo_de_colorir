@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/error_handler.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../services/community_service.dart';
 
 final conversationsProvider = FutureProvider<List<ChatConversation>>((ref) {
@@ -77,22 +78,10 @@ class _ConversationTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            CircleAvatar(
+            UserAvatar(
+              avatarUrl: conv.peerAvatar,
+              name: conv.peerName,
               radius: 24,
-              backgroundColor: FavoColors.primaryContainer.withAlpha(40),
-              backgroundImage: conv.peerAvatar != null
-                  ? NetworkImage(conv.peerAvatar!)
-                  : null,
-              child: conv.peerAvatar == null
-                  ? Text(
-                      conv.peerName.isNotEmpty
-                          ? conv.peerName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                          color: FavoColors.primary,
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(

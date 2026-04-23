@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/error_handler.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../services/community_service.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
@@ -168,23 +169,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            CircleAvatar(
+            UserAvatar(
+              avatarUrl: widget.peerAvatar,
+              name: widget.peerName,
               radius: 16,
-              backgroundColor: FavoColors.primaryContainer.withAlpha(40),
-              backgroundImage: widget.peerAvatar != null
-                  ? NetworkImage(widget.peerAvatar!)
-                  : null,
-              child: widget.peerAvatar == null
-                  ? Text(
-                      widget.peerName.isNotEmpty
-                          ? widget.peerName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: FavoColors.primary,
-                          fontWeight: FontWeight.bold),
-                    )
-                  : null,
             ),
             const SizedBox(width: 10),
             Expanded(

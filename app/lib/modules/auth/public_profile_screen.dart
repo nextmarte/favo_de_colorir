@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_handler.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../../models/peca.dart';
 import '../../models/peca_foto.dart';
 import '../../models/profile.dart';
@@ -47,24 +48,10 @@ class PublicProfileScreen extends ConsumerWidget {
             children: [
               // Header
               Center(
-                child: CircleAvatar(
+                child: UserAvatar(
+                  avatarUrl: p.avatarUrl,
+                  name: p.fullName,
                   radius: 48,
-                  backgroundColor: FavoColors.primaryContainer.withAlpha(40),
-                  backgroundImage: p.avatarUrl != null
-                      ? NetworkImage(p.avatarUrl!)
-                      : null,
-                  child: p.avatarUrl == null
-                      ? Text(
-                          p.fullName.isNotEmpty
-                              ? p.fullName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontSize: 36,
-                            color: FavoColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        )
-                      : null,
                 ),
               ),
               const SizedBox(height: 16),
