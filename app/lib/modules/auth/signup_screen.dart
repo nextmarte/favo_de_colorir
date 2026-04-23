@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme.dart';
+import '../../core/validators.dart';
 import '../../services/auth_service.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordConfirmController = TextEditingController();
   DateTime? _birthDate;
   bool _isLoading = false;
 
@@ -28,6 +30,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _passwordConfirmController.dispose();
     super.dispose();
   }
 
@@ -110,12 +113,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(hintText: 'email@exemplo.com'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Informe seu e-mail';
-                    if (!value.contains('@')) return 'E-mail inválido';
-                    return null;
-                  },
+                  decoration:
+                      const InputDecoration(hintText: 'email@exemplo.com'),
+                  validator: validateEmail,
                 ),
                 const SizedBox(height: 20),
 
@@ -128,8 +128,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [PhoneBRFormatter()],
                   decoration:
                       const InputDecoration(hintText: '(21) 99999-9999'),
+                  validator: validatePhoneBR,
                 ),
                 const SizedBox(height: 20),
 
@@ -151,8 +153,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                     child: Text(
                       _birthDate != null
-                          ? '${_birthDate!.day.toString().padLeft(2, '0')}/${_birthDate!.month.toString().padLeft(2, '0')}/${_birthDate!.year}'
-                          : 'mm/dd/yyyy',
+                          ? formatBirthDateBR(_birthDate!)
+                          : 'dd/mm/aaaa',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: _birthDate != null
                                 ? FavoColors.onSurface
@@ -173,13 +175,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   controller: _passwordController,
                   obscureText: true,
                   decoration: const InputDecoration(hintText: '••••••••'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Crie uma senha';
-                    if (value.length < 6) {
-                      return 'Senha deve ter pelo menos 6 caracteres';
-                    }
-                    return null;
-                  },
+                  validator: validatePasswordStrength,
+                ),
+                const SizedBox(height: 20),
+                Text('CONFIRMAR SENHA',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          letterSpacing: 1.5,
+                        )),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _passwordConfirmController,
+                  obscureText: true,
+                  decoration: const InputDecoration(hintText: '••••••••'),
+                  validator: (v) => validatePasswordsMatch(
+                      _passwordController.text, v),
                 ),
                 const SizedBox(height: 12),
 
@@ -255,11 +264,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
-      initialDate: DateTime(2000, 1, 1),
-      firstDate: DateTime(1940),
-      lastDate: DateTime.now(),
+      initialDate: _birthDate ?? DateTime(now.year - 25, 1, 1),
+      firstDate: DateTime(1920),
+      lastDate: now,
+      helpText: 'Data de nascimento',
     );
     if (date != null) {
       setState(() => _birthDate = date);

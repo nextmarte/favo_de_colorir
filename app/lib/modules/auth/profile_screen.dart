@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/error_handler.dart';
 import '../../core/theme.dart';
 import '../../models/profile.dart';
 import '../../services/auth_service.dart';
@@ -65,7 +66,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         // Avatar (tap to change)
         Center(
           child: GestureDetector(
-            onTap: () => _pickAvatar(context, ref, profile),
+            onTap: () => _pickAvatar(profile),
             child: Stack(
               children: [
                 CircleAvatar(
@@ -136,22 +137,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         const SizedBox(height: 28),
 
+        if (profile.bio != null && profile.bio!.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: FavoColors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(profile.bio!,
+                style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // Editar perfil
+        _MenuItem(
+          icon: Icons.edit_outlined,
+          label: 'Editar perfil',
+          onTap: () => context.push('/profile/edit'),
+        ),
+        const SizedBox(height: 20),
+
         // Notification settings
         Text('Configurações de Notificação',
             style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
 
         _SettingToggle(
-          icon: Icons.calendar_today_outlined,
-          label: 'Confirmações de aula',
-          value: true,
-          onChanged: (_) {},
+          icon: Icons.notifications_active_outlined,
+          label: 'Notificações push',
+          value: profile.pushEnabled,
+          onChanged: (v) => _togglePref(profile, 'push', v),
         ),
         _SettingToggle(
-          icon: Icons.receipt_long_outlined,
-          label: 'Pagamentos e cobranças',
-          value: true,
-          onChanged: (_) {},
+          icon: Icons.email_outlined,
+          label: 'Alertas por e-mail',
+          value: profile.emailEnabled,
+          onChanged: (v) => _togglePref(profile, 'email', v),
+        ),
+        _SettingToggle(
+          icon: Icons.forum_outlined,
+          label: 'Novidades da comunidade',
+          value: profile.communityNotifications,
+          onChanged: (v) => _togglePref(profile, 'community', v),
         ),
         const SizedBox(height: 20),
 
@@ -196,8 +224,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Future<void> _pickAvatar(
-      BuildContext context, WidgetRef ref, Profile profile) async {
+  Future<void> _togglePref(Profile profile, String key, bool value) async {
+    final current =
+        Map<String, dynamic>.from(profile.notificationPreferences ?? {});
+    current[key] = value;
+    try {
+      await ref.read(profileServiceProvider).updateProfile(
+        profile.id,
+        {'notification_preferences': current},
+      );
+      ref.invalidate(currentProfileProvider);
+    } catch (e) {
+      if (mounted) showErrorSnackBar(context, e);
+    }
+  }
+
+  Future<void> _pickAvatar(Profile profile) async {
     final picker = ImagePicker();
     final image = await picker.pickImage(
       source: ImageSource.gallery,
@@ -205,25 +247,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       imageQuality: 85,
     );
 
-    if (image == null) return;
+    if (image == null || !mounted) return;
 
     try {
       await ref.read(profileServiceProvider).uploadAvatar(
             profile.id,
             File(image.path),
           );
+      if (!mounted) return;
       ref.invalidate(currentProfileProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto atualizada!')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto atualizada!')),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao atualizar foto: $e')),
-        );
-      }
+      if (mounted) showErrorSnackBar(context, e);
     }
   }
 
@@ -258,11 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authServiceProvider).signOut();
       if (context.mounted) context.go('/login');
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao excluir: $e')),
-        );
-      }
+      if (context.mounted) showErrorSnackBar(context, e);
     }
   }
 
@@ -271,7 +304,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       UserRole.admin => 'Administradora',
       UserRole.teacher => 'Professora',
       UserRole.assistant => 'Assistente',
-      UserRole.student => 'Mensal',
+      UserRole.student => 'Estudante',
     };
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme.dart';
+import '../../core/validators.dart';
 import '../../models/profile.dart';
 import '../../services/auth_service.dart';
 import '../../services/policy_service.dart';
@@ -69,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   // Title
                   Text(
-                    'Bem-vindo de volta',
+                    'Bem de volta',
                     style: Theme.of(context).textTheme.headlineLarge,
                   ),
                   const SizedBox(height: 8),
@@ -89,15 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: const InputDecoration(
                       hintText: 'nome@exemplo.com',
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Informe seu e-mail';
-                      }
-                      if (!value.contains('@')) {
-                        return 'E-mail inválido';
-                      }
-                      return null;
-                    },
+                    validator: validateEmail,
                   ),
                   const SizedBox(height: 20),
 

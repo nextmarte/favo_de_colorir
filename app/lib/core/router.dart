@@ -9,6 +9,7 @@ import '../modules/auth/pending_approval_screen.dart';
 import '../modules/auth/admin_approval_screen.dart';
 import '../modules/auth/admin_create_user_screen.dart';
 import '../modules/auth/admin_users_screen.dart';
+import '../modules/auth/edit_profile_screen.dart';
 import '../modules/auth/notifications_screen.dart';
 import '../modules/auth/profile_screen.dart';
 import '../modules/agenda/home_screen.dart';
@@ -152,6 +153,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(
         path: '/community',
