@@ -221,7 +221,7 @@ class AdminPoliciesScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Forçar re-aceite?'),
         content: const Text(
-          'Todas as alunas terão que aceitar as políticas novamente no próximo login.',
+          'Toda a turma precisará aceitar as políticas novamente no próximo login.',
         ),
         actions: [
           TextButton(
@@ -246,7 +246,7 @@ class AdminPoliciesScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Re-aceite forçado! Todas as alunas precisarão aceitar novamente.')),
+              content: Text('Re-aceite forçado! Toda a turma precisará aceitar novamente.')),
         );
       }
     } catch (e) {

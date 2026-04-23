@@ -59,7 +59,7 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
           IconButton(
             icon: const Icon(Icons.person_add),
             onPressed: _addStudent,
-            tooltip: 'Adicionar aluna',
+            tooltip: 'Adicionar à turma',
           ),
         ],
       ),
@@ -74,13 +74,13 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
                           size: 48,
                           color: FavoColors.onSurfaceVariant.withAlpha(80)),
                       const SizedBox(height: 16),
-                      Text('Nenhuma aluna matriculada',
+                      Text('Ninguém matriculado ainda',
                           style: Theme.of(context).textTheme.bodyLarge),
                       const SizedBox(height: 12),
                       ElevatedButton.icon(
                         onPressed: _addStudent,
                         icon: const Icon(Icons.person_add, size: 18),
-                        label: const Text('Adicionar Aluna'),
+                        label: const Text('Adicionar à Turma'),
                       ),
                     ],
                   ),
@@ -182,7 +182,7 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Todas as alunas ativas já estão nesta turma')),
+            content: Text('Toda a turma ativa já está matriculada aqui')),
       );
       return;
     }
@@ -190,7 +190,7 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
     final selected = await showDialog<Profile>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Adicionar Aluna'),
+        title: const Text('Adicionar à Turma'),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -234,7 +234,7 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
       await _loadStudents();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${selected.fullName} matriculada!')),
+          SnackBar(content: Text('${selected.fullName} entrou na turma!')),
         );
       }
     } catch (e) {
@@ -250,7 +250,7 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remover aluna?'),
+        title: const Text('Remover da turma?'),
         content: Text('Remover $name desta turma?'),
         actions: [
           TextButton(
@@ -274,7 +274,7 @@ class _TurmaDetailScreenState extends ConsumerState<TurmaDetailScreen> {
       await _loadStudents();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$name removida da turma')),
+          SnackBar(content: Text('$name saiu da turma')),
         );
       }
     } catch (e) {

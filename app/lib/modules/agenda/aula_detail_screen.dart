@@ -68,7 +68,7 @@ class _AulaDetailScreenState extends ConsumerState<AulaDetailScreen> {
               const SizedBox(height: 8),
               _InfoRow(
                 icon: Icons.people_outline,
-                text: 'Capacidade: ${item.turma.capacity} alunas',
+                text: 'Capacidade: ${item.turma.capacity} participantes',
               ),
 
               if (item.aula.notes != null) ...[

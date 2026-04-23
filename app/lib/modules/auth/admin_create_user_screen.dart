@@ -63,7 +63,7 @@ class _AdminCreateUserScreenState
               TextFormField(
                 controller: _nameCtrl,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(hintText: 'Nome da aluna'),
+                decoration: const InputDecoration(hintText: 'Nome completo'),
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Informe o nome' : null,
               ),
@@ -115,7 +115,7 @@ class _AdminCreateUserScreenState
                 spacing: 8,
                 children: [
                   ChoiceChip(
-                    label: const Text('Aluna'),
+                    label: const Text('Estudante'),
                     selected: _role == 'student',
                     onSelected: (_) => setState(() => _role = 'student'),
                   ),
@@ -240,7 +240,7 @@ class _AdminCreateUserScreenState
               ),
               const SizedBox(height: 12),
               Text(
-                'Envie essas credenciais para a aluna.',
+                'Envie essas credenciais para a pessoa cadastrada.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

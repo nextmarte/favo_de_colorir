@@ -36,7 +36,7 @@ class _AdminNotificationsScreenState
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 4),
           Text(
-            'O recado aparecerá como notificação para todas as alunas ativas.',
+            'O recado aparecerá como notificação para toda a turma ativa.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),

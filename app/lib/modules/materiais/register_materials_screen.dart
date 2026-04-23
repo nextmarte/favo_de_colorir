@@ -60,7 +60,7 @@ class _RegisterMaterialsScreenState
           Text('Registrar Materiais',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 4),
-          Text('Registre o uso de argila e peças desta aluna.',
+          Text('Registre o uso de argila e peças de quem faz aula.',
               style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 28),
 

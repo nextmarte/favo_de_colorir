@@ -129,7 +129,7 @@ class _PendingCard extends ConsumerWidget {
       ref.invalidate(pendingProfilesProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${profile.fullName} aprovada!')),
+          SnackBar(content: Text('${profile.fullName} foi aprovado(a)!')),
         );
       }
     } catch (e) {

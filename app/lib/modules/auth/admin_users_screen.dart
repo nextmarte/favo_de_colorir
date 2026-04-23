@@ -37,7 +37,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 _buildChip('Todos', 'all'),
                 _buildChip('Admin', 'admin'),
                 _buildChip('Professora', 'teacher'),
-                _buildChip('Aluna', 'student'),
+                _buildChip('Estudante', 'student'),
               ],
             ),
           ),
@@ -190,7 +190,7 @@ class _UserCard extends ConsumerWidget {
     UserRole.admin => 'Admin',
     UserRole.teacher => 'Professora',
     UserRole.assistant => 'Assistente',
-    UserRole.student => 'Aluna',
+    UserRole.student => 'Estudante',
   };
 
   String _statusLabel(UserStatus status) => switch (status) {
@@ -216,7 +216,7 @@ class _RoleBadge extends StatelessWidget {
       UserRole.admin => 'Admin',
       UserRole.teacher => 'Prof',
       UserRole.assistant => 'Assist',
-      UserRole.student => 'Aluna',
+      UserRole.student => 'Estudante',
     };
 
     return Container(

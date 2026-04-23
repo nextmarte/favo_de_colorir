@@ -200,7 +200,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         _AdminCard(
           icon: Icons.person_add,
-          label: 'Criar Aluna',
+          label: 'Criar Estudante',
           onTap: () => context.push('/admin/create-user'),
         ),
         _AdminCard(
